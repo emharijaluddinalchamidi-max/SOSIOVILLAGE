@@ -30,7 +30,7 @@ input{padding:9px;border-radius:10px;border:2px solid var(--ln);background:var(-
 #rb{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom,0px));display:none;flex-direction:column;gap:8px;align-items:flex-end;z-index:3}
 #mb{background:var(--or);font-size:18px;padding:14px 20px;display:none;box-shadow:0 4px 12px #0004}#rb .z{width:44px;padding:8px}
 #ts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 100px);left:50%;transform:translateX(-50%);background:#222c;color:#fff;padding:8px 14px;border-radius:14px;z-index:8;display:none;max-width:90%;text-align:center}
-</style></head><body>
+#nv button{position:relative}#nv button[data-n]:not([data-n='']):after{content:attr(data-n);position:absolute;top:0;right:10px;background:#e53935;color:#fff;border-radius:9px;font-size:10px;padding:1px 5px}</style></head><body>
 <canvas id="cv"></canvas>
 <div id="au"><div class="bx"><h1>🏘️ SOSIOVILLAGE</h1><center><small>Belajar Sosiologi dengan Mengalami Masyarakat</small></center>
 <div class="tabs"><button class="on" id="tl" data-a="am" data-v="l">Masuk</button><button id="tr" data-a="am" data-v="r">Daftar Warga</button></div>
@@ -40,16 +40,16 @@ input{padding:9px;border-radius:10px;border:2px solid var(--ln);background:var(-
 <small>Jangan masukkan data pribadi asli. Progresmu tersimpan di akun emailmu.</small></div></div>
 <div id="hd"></div><div id="gd"></div><div id="fl"></div><div id="ts"></div><div id="pn"></div>
 <div id="js"><div id="kn"></div></div>
-<div id="rb"><button class="z" data-a="zm" data-v="-1">＋</button><button class="z" data-a="zm" data-v="1">－</button><button id="mb" data-a="enter">MASUK</button></div>
+<div id="rb"><button class="z" data-a="cam">🎥</button><button class="z" data-a="zm" data-v="-1">＋</button><button class="z" data-a="zm" data-v="1">－</button><button id="mb" data-a="enter">MASUK</button></div>
 <div id="nv"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
-/* ===== SOSIOVILLAGE · lapisan Supabase =====
+/* ===== SOSIOVILLAGE · lapisan Supabase (v3) =====
    Isi dua baris ini dengan data dari Supabase: Project Settings > API */
-const SB_URL = 'https://rscwqcqfnasfufkzheln.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzY3dxY3FmbmFzZnVma3poZWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3ODI2MzQsImV4cCI6MjEwOTM1ODYzNH0.ksmyEj3RZXMqEETHELPKhbD_AW7rxxbUFmGxyhFMh4o';
-/* ============================================ */
+const SB_URL = 'ISI_URL_PROYEK_SUPABASE';
+const SB_KEY = 'ISI_ANON_KEY_SUPABASE';
+/* ================================================= */
 (function () {
   const ok = !/^ISI_/.test(SB_URL + SB_KEY);
   const IN = 'padding:10px;border-radius:10px;border:2px solid #ddd;font:inherit;width:100%;box-sizing:border-box';
@@ -88,7 +88,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
     return data.session || login();
   };
   const rows = async c => {
-    const { data, error } = await sb.from('docs').select('id,data').eq('col', c).order('updated_at', { ascending: true }).limit(1000);
+    const { data, error } = await sb.from('docs').select('id,data,updated_at').eq('col', c).order('updated_at', { ascending: true }).limit(1000);
     if (error) throw error; return data || [];
   };
   const snap = a => ({ docs: a.map(r => ({ id: r.id, data: () => r.data })) });
@@ -109,7 +109,10 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
           async delete() {
             const { error } = await sb.from('docs').delete().eq('col', c).eq('id', id);
             if (error) throw error;
-            if (c == 'citizens' && id == uid) setTimeout(() => sb.auth.signOut(), 2000);
+            if (c == 'citizens' && id == uid) {
+              await sb.from('docs').delete().eq('col', 'plots').eq('data->>u', uid);
+              setTimeout(() => sb.auth.signOut(), 2500);
+            }
           }
         }),
         async add(d) {
@@ -120,17 +123,25 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
         orderBy(f, dir) { q.o = [f, dir]; return o; },
         limit(n) { q.l = n; return o; },
         onSnapshot(fn, er) {
-          const m = new Map();
+          let m = new Map(), sig = '';
           const emit = () => {
             let a = [...m.values()];
             if (q.o) { const f = q.o[0], s = q.o[1] == 'desc' ? -1 : 1; a.sort((x, y) => (x.data[f] > y.data[f] ? 1 : -1) * s); }
             if (q.l) a = a.slice(0, q.l);
             fn(snap(a));
           };
-          rows(c).then(a => { a.forEach(r => m.set(r.id, r)); emit(); }).catch(e => er && er(e));
+          // Pengambilan penuh berkala: cadangan bila ada event real-time yang terlewat
+          const load = async () => {
+            if (document.hidden && sig) return;
+            try {
+              const a = await rows(c), s = a.map(r => r.id + r.updated_at).join('|');
+              if (s !== sig) { sig = s; m = new Map(a.map(r => [r.id, r])); emit(); }
+            } catch (e) { er && er(e); }
+          };
+          load(); setInterval(load, 5000);
           sb.channel('c_' + c + Math.random().toString(36).slice(2))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'docs', filter: 'col=eq.' + c }, p => {
-              if (p.eventType == 'DELETE') m.delete(p.old.id); else m.set(p.new.id, { id: p.new.id, data: p.new.data });
+              if (p.eventType == 'DELETE') m.delete(p.old.id); else m.set(p.new.id, { id: p.new.id, data: p.new.data, updated_at: p.new.updated_at });
               emit();
             }).subscribe();
           return () => {};
@@ -139,19 +150,40 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
       return o;
     }
   };
+  const one = async t => { const { data } = await sb.from(t).select('email').maybeSingle(); return !!data; };
   const usr = {
     id: async () => uid,
-    canEdit: async () => { const { data } = await sb.from('teachers').select('email').maybeSingle(); return !!data; }
+    canEdit: () => one('teachers'),
+    isDev: () => one('developers'),
+    reset: async () => {
+      for (const c of ['citizens', 'votes', 'plots', 'donations', 'proposals', 'chat']) {
+        const { error } = await sb.from('docs').delete().eq('col', c);
+        if (error) throw error;
+      }
+    }
   };
+  // Posisi pemain lewat Broadcast (bukan Presence): lebih tahan untuk update cepat
   function room() {
     const key = uid + '_' + Math.random().toString(36).slice(2, 6);
-    let st = {}, fn = null, t = 0, pend = false, joined = false;
-    const ch = sb.channel('desa', { config: { presence: { key } } });
-    const peers = () => { const s = ch.presenceState(); return Object.keys(s).map(k => ({ peer: k, isMe: k == key, presence: s[k][s[k].length - 1] })); };
-    const send = () => { pend = false; t = Date.now(); if (joined) ch.track(st); };
-    ch.on('presence', { event: 'sync' }, () => fn && fn({ peers: peers() })).subscribe(s => { if (s == 'SUBSCRIBED') { joined = true; if (st.n) send(); } });
+    let st = {}, fn = null, joined = false, last = 0, pend = false, tp = 0;
+    const seen = new Map();
+    const ch = sb.channel('desa', { config: { broadcast: { self: false } } });
+    const peers = () => { const t = Date.now(), a = []; seen.forEach((v, k) => { if (t - v.t > 7000) seen.delete(k); else a.push({ peer: k, isMe: false, presence: v.p }); }); return a; };
+    const emit = () => fn && fn({ peers: peers() });
+    const send = () => { last = Date.now(); if (joined && st.n !== undefined) ch.send({ type: 'broadcast', event: 'p', payload: Object.assign({}, st, { k: key }) }); };
+    ch.on('broadcast', { event: 'p' }, m => {
+      const p = m.payload; if (!p || !p.k || p.k == key) return;
+      if (!p.n) seen.delete(p.k); else seen.set(p.k, { t: Date.now(), p });
+      if (!pend) { pend = true; setTimeout(() => { pend = false; emit(); }, 120); }
+    }).subscribe(s => { if (s == 'SUBSCRIBED') { joined = true; send(); } });
+    setInterval(() => { emit(); if (st.n && Date.now() - last > 2500) send(); }, 1500);
+    addEventListener('pagehide', () => { st.n = ''; send(); });
     return {
-      presence: async p => { st = { ...st, ...p }; if (Date.now() - t > 250) send(); else if (!pend) { pend = true; setTimeout(send, 250); } },
+      presence: async p => {
+        st = Object.assign({}, st, p);
+        if (Date.now() - last > 200) send();
+        else if (!tp) tp = setTimeout(() => { tp = 0; send(); }, 220);
+      },
       onPeers: f => { fn = f; },
       peers
     };
@@ -187,14 +219,15 @@ const M=[
 {id:'m3',t:'Gotong Royong di Balai Warga',loc:'balai',topic:'Kelompok Sosial',pf:5,coin:90,xp:55,mat:'Paguyuban (gemeinschaft) ditandai hubungan erat, kekeluargaan, dan ikatan emosional. Patembayan (gesellschaft) ditandai hubungan formal, kontraktual, dan berorientasi tujuan.',c:'Warga RT rutin kerja bakti, saling mengenal dekat, dan saling menolong saat ada hajatan. Sementara itu, rekan kerja di sebuah pabrik berhubungan berdasarkan kontrak dan jabatan.',q:'Manakah pernyataan yang benar tentang kelompok warga RT tersebut?',o:[['Termasuk paguyuban: hubungan erat, kekeluargaan, ikatan emosional',2],['Termasuk patembayan: hubungan formal berdasarkan kontrak',0],['Bukan kelompok sosial karena tidak ada struktur',0],['Kelompok sekunder dengan tujuan laba',0]],e:'Hubungan yang akrab, kekeluargaan, dan emosional merupakan ciri paguyuban. Kontrak dan jabatan adalah ciri patembayan.'},
 {id:'m4',t:'Antrean Panjang di Puskesmas',loc:'puskesmas',topic:'Stratifikasi Sosial',pf:4,coin:110,xp:65,mat:'Stratifikasi sosial adalah pelapisan masyarakat berdasarkan ekonomi, pendidikan, atau kekuasaan. Posisi dalam lapisan memengaruhi kesempatan hidup (life chances) seperti akses kesehatan.',c:'Warga permukiman padat berpenghasilan rendah sulit ke puskesmas karena biaya transportasi dan jam kerja, sedangkan warga perumahan mapan mudah berobat ke klinik swasta.',q:'Konsep sosiologi apa yang paling relevan, dan apa implikasi kebijakannya?',o:[['Stratifikasi sosial memengaruhi kesempatan hidup; perlu layanan yang menjangkau lapisan bawah',2],['Stratifikasi hanya soal perbedaan, jadi tidak perlu kebijakan',1],['Diferensiasi sosial tanpa tingkatan, semua warga setara',0],['Mobilitas vertikal turun, jadi warga harus pindah',0]],e:'Perbedaan lapisan sosial menciptakan perbedaan akses layanan. Kebijakan sosial perlu mengurangi hambatan. Menganggap lapisan hanya sebagai perbedaan mengabaikan dampak ketimpangan.'}];
 const B=[
-{id:'pasar',n:'Pasar Tradisional',x:-24,z:-16,w:10,d:8,h:4,c:0xff8a65,r:0xc62828,i:'Pusat jual beli warga. Amati ketimpangan antar pedagang.'},
-{id:'sekolah',n:'Sekolah',x:24,z:-18,w:12,d:8,h:5,c:0xfff176,r:0x1565c0,i:'Tempat sosialisasi dan belajar bersama.'},
-{id:'kantor',n:'Kantor Desa',x:9,z:-30,w:10,d:7,h:5,c:0xb0bec5,r:0x37474f,i:'Pilih profesi dan absen harian di sini.'},
-{id:'puskesmas',n:'Puskesmas',x:-10,z:-30,w:9,d:7,h:4,c:0xffffff,r:0xe53935,i:'Layanan kesehatan masyarakat.'},
-{id:'permukiman',n:'Permukiman',x:-26,z:20,w:10,d:9,h:3.5,c:0x80cbc4,r:0x6d4c41,i:'Rumah-rumah warga. Berbincanglah dengan tetangga.'},
-{id:'taman',n:'Taman Desa',x:26,z:22,w:12,d:10,h:0,c:0x66bb6a,r:0,i:'Ruang publik warga. Kerja bakti membangun kepedulian lingkungan.'},
-{id:'balai',n:'Balai Warga',x:11,z:14,w:9,d:7,h:4.5,c:0xce93d8,r:0x6a1b9a,i:'Tempat musyawarah. Usulkan dan pilih pembangunan desa.'},
-{id:'rusun',n:'Rusun Warga',x:-11,z:16,w:9,d:9,h:12,c:0x90caf9,r:0x283593,i:'Tempat tinggal awal warga baru.'}];
+{id:'taman',n:'Taman Desa',x:-84,z:-14,w:12,d:10,h:0,c:0x66bb6a,r:0,i:'Ruang publik warga. Kerja bakti membangun kepedulian lingkungan.'},
+{id:'rusun',n:'Rusun Warga',x:-58,z:-13.5,w:9,d:9,h:12,c:0x90caf9,r:0x283593,i:'Tempat tinggal awal warga baru.'},
+{id:'pasar',n:'Pasar Tradisional',x:-34,z:-13,w:10,d:8,h:4,c:0xff8a65,r:0xc62828,i:'Pusat jual beli warga. Amati ketimpangan antar pedagang.'},
+{id:'puskesmas',n:'Puskesmas',x:-14,z:-12.5,w:9,d:7,h:4,c:0xffffff,r:0xe53935,i:'Layanan kesehatan masyarakat.'},
+{id:'kantor',n:'Kantor Desa',x:14,z:-12.5,w:10,d:7,h:5,c:0xb0bec5,r:0x37474f,i:'Pilih profesi dan absen harian di sini.'},
+{id:'sekolah',n:'Sekolah',x:38,z:-13,w:12,d:8,h:5,c:0xfff176,r:0x1565c0,i:'Tempat sosialisasi dan belajar bersama.'},
+{id:'balai',n:'Balai Warga',x:62,z:-12.5,w:9,d:7,h:4.5,c:0xce93d8,r:0x6a1b9a,i:'Tempat musyawarah. Usulkan dan pilih pembangunan desa.'},
+{id:'permukiman',n:'Kavling Permukiman',x:12,z:14,w:6,d:5,h:3,c:0x80cbc4,r:0x6d4c41,i:'Pos kavling. Pilih petak tanah untuk membangun rumahmu.'},
+{id:'pabrik',n:'Pabrik',x:-100,z:40,w:24,d:14,h:8,c:0x9e9e9e,r:0x546e7a,i:'Pusat produksi desa. Pelajari dunia kerja dan ekonomi.'}];
 const WK=[['Kamu meneliti mengapa warga jarang ikut kerja bakti. Langkah awal paling tepat?',[['Menyusun pertanyaan penelitian lalu mewawancarai dan mengamati warga',2],['Menyebar survei tanpa tujuan yang jelas',1],['Menyimpulkan dari satu kenalan saja',0]]],['Siswa dari keluarga kurang mampu sering tertinggal. Apa analisis awalmu?',[['Mengkaji hambatan akses (biaya, buku, waktu belajar) dan peran sekolah mengatasinya',2],['Hanya menambah jam pelajaran',1],['Menyebut mereka malas',0]]],['Pedagang kecil kalah bersaing dengan toko modern. Apa rekomendasimu?',[['Membentuk koperasi dengan akses modal dan pemasaran bersama',2],['Melarang toko modern berdiri',1],['Membiarkan saja',0]]],['Sungai desa tercemar sampah. Apa langkah sosiologismu?',[['Menggerakkan norma dan kebiasaan bersama, misalnya bank sampah dan kerja bakti',2],['Memasang papan larangan saja',1],['Menyalahkan satu warga',0]]],['Program bantuan desa tidak tepat sasaran. Apa yang kamu lakukan?',[['Memperbarui data kelompok sasaran dan mengevaluasi dampak program',2],['Menambah dana tanpa evaluasi',1],['Menghentikan semua bantuan',0]]],['Warga enggan datang ke musyawarah. Apa pendekatanmu?',[['Mengajak tokoh warga, mendengar kebutuhan, dan melibatkan mereka dalam keputusan',2],['Mengumumkan lewat spanduk saja',1],['Memutuskan sendiri agar cepat',0]]]];
 function wcard(){if(S.prof==null)return '<div class="cd"><div><b>Belum punya pekerjaan</b><small>Pilih profesi di bawah untuk mulai bekerja.</small></div></div>';const w=Math.ceil((S.wt-Date.now())/1000),L=1+Math.floor((S.px[S.prof]||0)/60);return `<div class="cd"><span class="ic">${P[S.prof][0]}</span><div><b>Pekerjaan: ${P[S.prof][1]}</b><small>Level profesi ${L} · hadiah sampai ${20+5*L} 🪙 per tugas</small></div>${w>0?`<small>⏳ Istirahat ${w} detik, buka tab KERJA lagi nanti</small>`:`<button data-a="work">Mulai Bekerja</button>`}</div>`}
 const KQ=[[
@@ -263,12 +296,12 @@ let KBv=null;const KB=()=>KBv==null?(S.prof==null?0:S.prof):KBv;
 const IT=[['Furniture','🛏️','Kasur',150],['Furniture','🪑','Kursi',80],['Furniture','📚','Rak Buku',200],['Furniture','🛋️','Sofa',350],['Pakaian','👕','Kaos Merah',60,'#e63946'],['Pakaian','🧥','Jaket Biru',120,'#1d6fe0'],['Pakaian','🥻','Batik',180,'#8a5a2b'],['Dekorasi','🪴','Tanaman',50],['Dekorasi','🖼️','Lukisan',90],['Dekorasi','🕯️','Lampu Hias',70],['Rumah Tangga','🍳','Peralatan Masak',100],['Rumah Tangga','📺','Televisi',400]];
 const C=['Furniture','Pakaian','Dekorasi','Rumah Tangga'],HS=[['Rusun Warga (kamar bersama)',0,'#e8dcc4'],['Rumah Kontrakan',1500,'#cde7d0'],['Rumah Sederhana',5000,'#f6d9b0'],['Rumah Asri Berkebun',12000,'#bfe3f5']];
 const COL=['#e63946','#1d6fe0','#2e9e5b','#ff9f1c','#8e44ad','#222222'],SKN=['#ffdbac','#e0ac69','#8d5524'];let sel=[COL[0],SKN[0]];
-const lv=()=>1+Math.floor(S.xp/100),day=()=>1+Math.floor((Date.now()-S.reg)/6e5),save=()=>{clearTimeout(save.t);save.t=setTimeout(()=>{if(DB&&UID&&S)cl('citizens').doc(UID).set(pack(S)).then(()=>{lastSv=Date.now()}).catch(()=>{})},400)};
+const lv=()=>1+Math.floor(S.xp/100),day=()=>{const m=t=>{const d=new Date(t);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};return Math.round((m(Date.now())-m(S.reg))/864e5)+1},save=()=>{clearTimeout(save.t);save.t=setTimeout(()=>{if(DB&&UID&&S)cl('citizens').doc(UID).set(pack(S)).then(()=>{lastSv=Date.now()}).catch(()=>{})},400)};
 function toast(m){S.nt.unshift(m);S.nt=S.nt.slice(0,15);const t=$('#ts');t.textContent=m;t.style.display='block';clearTimeout(t.k);t.k=setTimeout(()=>t.style.display='none',2600)}
 function gain(c,x,w){const l=lv();S.coin+=c;S.xp+=x;S.h.unshift([day(),w,c]);S.h=S.h.slice(0,40);save();hud();toast(`+${c} 🪙 +${x} XP: ${w}`);if(lv()>l)toast(`🎉 Naik ke Level ${lv()}!`)}
 function spend(c,w){if(S.coin<c){toast('Saldo SOSIO COINS tidak cukup');return 0}S.coin-=c;S.h.unshift([day(),w,-c]);save();hud();return 1}
 const avh=(c,k)=>`<div class="av" style="border-color:${c};background:${k}">😊</div>`;
-function hud(){$('#hd').innerHTML=`<div class="ch" data-a="tab" data-v="ktp" style="display:flex;gap:6px;align-items:center;cursor:pointer">${avh(S.col,S.skin)}<span>${esc(S.n)}<br><small>Level ${lv()}${S.prof!=null?' · '+P[S.prof][1]:''}</small></span></div><div class="ch">👥 ${CT.length} warga · 🟢 ${Object.keys(RP).length+1} online</div><div class="ch">❤️ ${S.hp||100}</div><div class="ch">🪙 ${S.coin}</div><div class="ch">⭐ ${S.xp} XP</div><div class="ch">📅 Hari ${day()}</div><div class="ch" id="wx"></div><button data-a="snd" class="ch" style="color:inherit;background:var(--cd)">${mon?'🔊':'🔇'}</button><button data-a="bell" class="ch" style="color:inherit;background:var(--cd)">🔔 ${S.nt.length}</button>`;
+function hud(){$('#hd').innerHTML=`<div class="ch" data-a="tab" data-v="ktp" style="display:flex;gap:6px;align-items:center;cursor:pointer">${avh(S.col,S.skin)}<span>${esc(S.n)}<br><small>Level ${lv()} · Desil ${dsl(S.coin)}${S.prof!=null?' · '+P[S.prof][1]:''}</small></span></div><div class="ch">👥 ${CT.length} warga · 🟢 ${Object.keys(RP).length+1} online</div><div class="ch">❤️ ${S.hp||100}</div><div class="ch">🪙 ${S.coin}</div><div class="ch">⭐ ${S.xp} XP</div><div class="ch">📅 Hari ${day()} · ${new Date().toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'})}</div><div class="ch" id="wx"></div><button data-a="snd" class="ch" style="color:inherit;background:var(--cd)">${mon?'🔊':'🔇'}</button><button data-a="bell" class="ch" style="color:inherit;background:var(--cd)">🔔 ${S.nt.length}</button>`;
  document.querySelectorAll('#nv button').forEach(b=>b.classList.toggle('on',b.dataset.v==(PK&&T[PK]?PK:PK?'desa':'desa')))}
 const bn=id=>(B.find(b=>b.id==id)||{n:'Bidang Kerja'}).n;
 const mrow=m=>`<div class="cd"><span class="ic">${P[m.pf][0]}</span><div><b>${m.t}</b><small>📍 ${bn(m.loc)} · ${m.topic}</small></div>${S.done[m.id]?'✅ Selesai':m.loc=='kerja'&&S.prof!=m.pf?'🔒 Pilih profesi':`<button data-a="mis" data-v="${m.id}">Mulai Misi</button>`}</div>`;
@@ -279,7 +312,7 @@ const T={
 kerja:()=>`<h2>💼 Kerja</h2>${wcard()}<h3>Pilih Profesi Utama</h3>${profs()}<h3>Misi Bidang Kerja</h3><div class="tabs">${P.map((p,i)=>`<button class="${i==KB()?'on':''}" data-a="kb" data-v="${i}">${p[0]}</button>`).join('')}</div><small>${P[KB()][1]}: ${M.filter(m=>m.pf==KB()&&m.loc=='kerja'&&S.done[m.id]).length}/${M.filter(m=>m.pf==KB()&&m.loc=='kerja').length} selesai${S.prof==KB()?'':' · pilih profesi ini untuk mengerjakan'}</small>${M.filter(m=>m.pf==KB()&&m.loc=='kerja').map(mrow).join('')}<h3>Misi Lokasi</h3>${M.filter(m=>m.loc!='kerja').map(mrow).join('')}`,
 toko:()=>`<h2>🛒 Toko Desa</h2><small>Saldo: 🪙 ${S.coin}</small><div class="tabs">${C.map(c=>`<button class="${c==SC?'on':''}" data-a="cat" data-v="${c}">${c}</button>`).join('')}</div><div class="grid">${IT.map((o,i)=>o[0]==SC?`<div class="cd"><div class="big">${o[1]}</div><b>${o[2]}</b><small>🪙 ${o[3]}</small><button data-a="buy" data-v="${i}">Beli</button></div>`:'').join('')}</div>`,
 rumah:()=>{const H=HS[S.home],N=HS[S.home+1];return `<h2>🏠 Rumahku</h2><b>${H[0]}</b><div class="room" style="background:${H[2]}">${S.inv.map(o=>o.on&&!IT[o.i][4]?IT[o.i][1]:'').join('')||'<small>Kamar masih kosong. Beli perabot di Toko.</small>'}</div>${N?`<h3>Upgrade: ${N[0]}</h3><div class="bar"><i style="width:${Math.min(100,S.coin/N[1]*100)}%"></i></div><small>Harga 🪙 ${N[1]} · Saldo 🪙 ${S.coin}</small><button data-a="up">Beli / Upgrade</button>`:'<h3>🏆 Rumah impian tercapai!</h3>'}<h3>Inventaris</h3>${S.inv.length?S.inv.map((o,i)=>{const t=IT[o.i];return `<div class="cd"><span class="ic">${t[1]}</span><div>${t[2]}</div><button data-a="${t[4]?'wear':'tog'}" data-v="${i}">${t[4]?'Pakai':o.on?'Simpan':'Pasang'}</button></div>`}).join(''):'<small>Belum ada barang.</small>'}`},
-ktp:()=>`<h2>🪪 KTP Virtual</h2><div class="ktp">${avh(S.col,S.skin)}<div><b style="font-size:17px">${esc(S.n)}</b><br>No. ${S.no}<br>Profesi: ${S.prof!=null?P[S.prof][1]:'Belum memilih'}<br>Level ${lv()} · Terdaftar ${S.rd}<br><small>Fiktif, bukan identitas asli</small></div></div><h3>👛 Dompet SOSIO COINS</h3><b>🪙 ${S.coin}</b> · ⭐ ${S.xp} XP · Misi selesai ${Object.keys(S.done).length}/${M.length}<small>Koin bersifat fiktif, tidak dapat ditukar uang nyata.</small>${S.h.map(h=>`<div style="color:${h[2]>0?'#2e9e5b':'#d64545'}">Hari ${h[0]} · ${h[2]>0?'+':''}${h[2]} · ${esc(h[1])}</div>`).join('')}`,
+ktp:()=>`<h2>🪪 KTP Virtual</h2><div class="ktp">${avh(S.col,S.skin)}<div><b style="font-size:17px">${esc(S.n)}</b><br>No. ${S.no}<br>Profesi: ${S.prof!=null?P[S.prof][1]:'Belum memilih'}<br>Level ${lv()} · Desil ${dsl(S.coin)} (${DK[dsl(S.coin)-1]}) · Terdaftar ${S.rd}<br><small>Fiktif, bukan identitas asli</small></div></div><h3>👛 Dompet SOSIO COINS</h3><b>🪙 ${S.coin}</b> · ⭐ ${S.xp} XP · Misi selesai ${Object.keys(S.done).length}/${M.length}<small>Koin bersifat fiktif, tidak dapat ditukar uang nyata.</small>${S.h.map(h=>`<div style="color:${h[2]>0?'#2e9e5b':'#d64545'}">Hari ${h[0]} · ${h[2]>0?'+':''}${h[2]} · ${esc(h[1])}</div>`).join('')}`,
 chat:()=>`<h2>💬 Obrolan Warga</h2><div class="log">${SH.ch.slice(-30).map(c=>`<p class="${c.a?'an':''}"><b>${esc(c.u)}</b>${c.a?' 📢':''}: ${esc(c.m)}</p>`).join('')}</div><div class="row"><input id="cm" maxlength="120" placeholder="Tulis pesan sopan..."><button data-a="send">Kirim</button></div><small>Pesan difilter otomatis. Jangan bagikan data pribadi.</small>`};
 function bh(id){const b=B.find(x=>x.id==id);let h=`<h2>${b.n}</h2><p>${b.i}</p>`+M.filter(m=>m.loc==id).map(mrow).join('');
  if(id=='kantor')h+=`<h3>Profesi</h3>${profs()}<button data-a="daily">🎁 Absen Harian (+25 🪙)</button>`;
@@ -322,10 +355,10 @@ vote(v){const p=SH.pr.find(x=>x.id==v);if(!p||p.vs.includes(S.n))return;p.vs.pus
 prop(){const t=flt($('#pp').value.trim());if(t.length<8)return toast('Usulan minimal 8 karakter');SH.pr.push({id:Date.now(),by:S.n,t,v:0,vs:[]});Wr('sv_sh',SH);if(!S.pr){S.pr=1;gain(10,10,'Mengajukan usulan')}go('balai')},
 send(){const t=flt($('#cm').value.trim());if(!t||Date.now()-lastMsg<2000)return;lastMsg=Date.now();SH.ch.push({u:S.n,m:t});SH.ch=SH.ch.slice(-60);Wr('sv_sh',SH);go('chat')},
 out(){LS.removeItem('sv_s');location.reload()}};
-const cl=n=>DB.collection(n),pack=s=>({...s,h:JSON.stringify(s.h)}),unpack=d=>({...d,h:JSON.parse(d.h||'[]')}),mine=()=>VT[UID]||{},vc=id=>Object.values(VT).filter(v=>v[id]).length,need=()=>Math.max(2,Math.ceil(CT.length/2));
+const cl=n=>DB.collection(n),pack=s=>({...s,h:JSON.stringify(s.h),ts:Date.now()}),unpack=d=>({...d,h:JSON.parse(d.h||'[]')}),mine=()=>VT[UID]||{},vc=id=>Object.values(VT).filter(v=>v[id]).length,need=()=>Math.max(2,Math.ceil(CT.length/2));
 const chh=()=>CH.length?CH.map(c=>`<p><b>${esc(c.u)}</b>: ${esc(c.m)}</p>`).join(''):'<small>Belum ada pesan. Sapa warga lain!</small>';
 function rb(){if(!$('#pp'))return;const v=$('#pp').value;go('balai');$('#pp').value=v}
-function net(){const bad=()=>{};cl('citizens').onSnapshot(s=>{CT=s.docs.map(d=>d.data());if(S)hud();if(G)gd()},bad);cl('proposals').onSnapshot(s=>{PR=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.ts-b.ts);rb();if(G)gd()},bad);cl('votes').onSnapshot(s=>{VT={};s.docs.forEach(d=>VT[d.id]=d.data());rb()},bad);cl('chat').orderBy('ts','desc').limit(40).onSnapshot(s=>{CH=s.docs.map(d=>d.data()).reverse();const l=$('#lg');if(l){l.innerHTML=chh();l.scrollTop=l.scrollHeight}},bad)}
+function net(){const bad=()=>{};cl('citizens').onSnapshot(s=>{CT=s.docs.map(d=>d.data());chkReset();if(S)hud();if(G)gd()},bad);cl('proposals').onSnapshot(s=>{PR=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.ts-b.ts);rb();if(G)gd()},bad);cl('votes').onSnapshot(s=>{VT={};s.docs.forEach(d=>VT[d.id]=d.data());rb()},bad);cl('chat').orderBy('ts','desc').limit(40).onSnapshot(s=>{const oldT=CH.length?CH[CH.length-1].ts:Date.now();CH=s.docs.map(d=>d.data()).reverse();chatNotify(oldT);const l=$('#lg');if(l){l.innerHTML=chh();l.scrollTop=l.scrollHeight}},bad)}
 bal=function(){const tot=PR.length?PR.reduce((s,p)=>s+Math.min(1,vc(p.id)/need()),0)/PR.length*100:0;return `<h3>🏗️ Pembangunan Desa: ${Math.round(tot)}%</h3><div class="bar"><i style="width:${tot}%"></i></div><small>Usulan dibangun setelah dipilih ${need()} warga (setengah dari jumlah warga).</small>`+(PR.length?[...PR].sort((a,b)=>vc(b.id)-vc(a.id)).map(p=>{const v=vc(p.id),m=mine()[p.id];return `<div class="cd"><div><b>${esc(p.t)}</b><small>oleh ${esc(p.by)} · ${v} suara ${v>=need()?'· ✅ Dibangun':''}</small><div class="bar"><i style="width:${Math.min(100,v/need()*100)}%"></i></div></div><button data-a="vote" data-v="${p.id}" ${m?'disabled':''}>${m?'Terpilih':'Pilih'}</button></div>`}).join(''):'<small>Belum ada usulan. Jadilah yang pertama!</small>')+`<div class="row"><input id="pp" maxlength="60" placeholder="Usulan pembangunan baru..."><button data-a="prop">Ajukan</button></div>`};
 T.chat=()=>`<h2>💬 Obrolan Warga</h2><small>🟢 ${Object.keys(RP).length+1} warga online</small><div class="log" id="lg">${chh()}</div><div class="row"><input id="cm" maxlength="120" placeholder="Tulis pesan sopan..."><button data-a="send">Kirim</button></div><small>Pesan difilter otomatis. Jangan bagikan data pribadi.</small>`;
 A.vote=v=>{const m=mine();if(m[v]||!UID)return;const n={...m,[v]:1};VT[UID]=n;cl('votes').doc(UID).set(n).catch(()=>toast('Gagal menyimpan suara'));if(S.vr<5){S.vr++;gain(5,5,'Berpartisipasi memilih')}go('balai')};
@@ -336,7 +369,7 @@ async function init(){const e=$('#er'),b=$('#gb');b.disabled=true;b.textContent=
 function tag(g,t){const c=document.createElement('canvas');c.width=256;c.height=48;const x=c.getContext('2d');x.fillStyle='#000a';x.fillRect(0,4,256,40);x.fillStyle='#fff';x.font='bold 26px sans-serif';x.textAlign='center';x.fillText(String(t).slice(0,16),128,34);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));s.scale.set(4,.75,1);s.position.y=2.9;g.add(s)}
 let RT=0,lastP='';
 function netTick(t){if(!RM||!S||!pl)return;if(t-RT>120){RT=t;const p=[pl.position.x.toFixed(1),pl.position.z.toFixed(1),pl.rotation.y.toFixed(2)].join();if(p!=lastP){lastP=p;RM.presence({n:S.n,x:pl.position.x,z:pl.position.z,r:pl.rotation.y,c:S.col,k:S.skin}).catch(()=>{})}}for(const id in RP){const o=RP[id];o.g.position.x+=(o.x-o.g.position.x)*.2;o.g.position.z+=(o.z-o.g.position.z)*.2;o.g.rotation.y=o.r}}
-function sync(ch){if(!sc)return;const seen={},hx=/^#[0-9a-f]{6}$/i;ch.peers.filter(p=>!p.isMe&&p.presence&&p.presence.n).forEach(p=>{const d=p.presence;seen[p.peer]=1;let o=RP[p.peer];if(!o){const g=person(hx.test(d.c)?d.c:'#888888',hx.test(d.k)?d.k:'#ffdbac');g.position.set(+d.x||0,0,+d.z||0);tag(g,d.n);o=RP[p.peer]={g}}o.x=+d.x||0;o.z=+d.z||0;o.r=+d.r||0});for(const id in RP)if(!seen[id]){sc.remove(RP[id].g);delete RP[id]}hud()}
+function sync(ch){if(!sc)return;const seen={},hx=/^#[0-9a-f]{6}$/i;ch.peers.filter(p=>!p.isMe&&p.presence&&p.presence.n).forEach(p=>{const d=p.presence;seen[p.peer]=1;let o=RP[p.peer];if(!o){const g=person(hx.test(d.c)?d.c:'#888888',hx.test(d.k)?d.k:'#ffdbac');g.position.set(+d.x||0,0,+d.z||0);tag(g,d.n);o=RP[p.peer]={g}}o.x=+d.x||0;o.z=+d.z||0;o.r=+d.r||0});for(const id in RP)if(!seen[id]){sc.remove(RP[id].g);delete RP[id]}const nn=Object.keys(RP).length;if(nn!=window.__np){window.__np=nn;hud()}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a]&&!b.disabled)A[b.dataset.a](b.dataset.v)});
 document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1;if(e.key=='Enter'||e.key.toLowerCase()=='e')A.enter()});document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 $('#sc').innerHTML=COL.map((c,i)=>`<i style="background:${c}" class="${i?'':'on'}" data-i="${i}"></i>`).join('');$('#sk').innerHTML=SKN.map((c,i)=>`<i style="background:${c}" class="${i?'':'on'}" data-i="${i}"></i>`).join('');
@@ -355,45 +388,45 @@ function mkB(b){const{x,z,w,d,h,c,r,id}=b,fz=z+d/2;
  else if(id=='sekolah'){bx(w+4,.06,d+5,0xc5e1a5,x,.06,z+1.5);bd(x,z-2.5,w,3,4.2,c);bd(x-4.5,z+.5,3,5,4.2,c);bd(x+4.5,z+.5,3,5,4.2,c);bx(w+.6,.4,3.6,r,x,4.4,z-2.5);bx(3.6,.4,5.6,r,x-4.5,4.4,z+.5);bx(3.6,.4,5.6,r,x+4.5,4.4,z+.5);dr(x,z-.94);wn(x-2,2.4,z-.94);wn(x+2,2.4,z-.94);wn(x-4.5,2.4,z+3.06);wn(x+4.5,2.4,z+3.06);bx(.12,.9,.9,0xbbdefb,x-2.94,2.4,z+.5);bx(.12,.9,.9,0xbbdefb,x+2.94,2.4,z+.5);fl(x,z+1.8,6)}
  else if(id=='kantor'){bd(x,z,w,d,4.4,c);rf(w+1,d+1,2,r,x,4.4,z);bx(w-.5,.3,2,0xeceff1,x,.15,fz+1);for(let i=0;i<4;i++)bx(.5,4.2,.5,0xffffff,x-3.3+i*2.2,2.1,fz+1.7);bx(8,.4,2.2,0xeceff1,x,4.4,fz+1);rf(8,.4,1.4,0xeceff1,x,4.6,fz+1.9);dr(x,fz+.06);wn(x-3.2,2.4,fz+.06);wn(x+3.2,2.4,fz+.06);fl(x+6.5,fz+2,7)}
  else if(id=='puskesmas'){bd(x,z,w,d,3.6,c);bx(w+.6,.4,d+.6,0xeeeeee,x,3.8,z);bx(.4,1.1,.1,0xe53935,x,3,fz+.08);bx(1.1,.4,.1,0xe53935,x,3,fz+.08);bx(3.2,.2,2,0x43a047,x,2.3,fz+1);bx(.12,2.3,.12,0x757575,x-1.4,1.15,fz+1.9);bx(.12,2.3,.12,0x757575,x+1.4,1.15,fz+1.9);dr(x,fz+.06);wn(x-3,1.8,fz+.06);wn(x+3,1.8,fz+.06);bd(x+6.4,z+2.5,1.5,3,1.3,0xffffff);bx(1.52,.25,3,0xe53935,x+6.4,.9,z+2.5)}
- else if(id=='permukiman'){[[-3.5,-2,0xef9a9a,0x6d4c41],[3.5,-2,0xfff59d,0xc62828],[-3.5,2.5,0xa5d6a7,0x37474f],[3.5,2.5,0x90caf9,0x8d6e4a]].forEach(a=>{const hx=x+a[0],hz=z+a[1];bd(hx,hz,3.6,3.2,2.4,a[2]);rf(4.4,4,1.6,a[3],hx,2.4,hz);dr(hx-.6,hz+1.66);wn(hx+1.1,1.5,hz+1.66)})}
+ else if(id=='permukiman'){bd(x,z,w,d,3,c);rf(w+1,d+1,1.8,r,x,3,z);dr(x,fz+.06);wn(x-2,1.8,fz+.06);wn(x+2,1.8,fz+.06);bx(4,.8,.15,0xffffff,x,3.9,fz+.1)}
+ else if(id=='pabrik'){bd(x,z,w,d,8,c);rf(w+1,d+.5,3,r,x,8,z);bx(4,4,.15,0x37474f,x,2,fz+.08);[-8,-4,8].forEach(o=>{const ch=new THREE.Mesh(new THREE.CylinderGeometry(.9,1.2,14,8),MT(0xb71c1c));ch.position.set(x+o,7,z-d/2);sc.add(ch);for(let k=0;k<2;k++){const q=new THREE.Mesh(new THREE.SphereGeometry(1.2,6,5),MT(0xcfd8dc));q.position.set(x+o,15+k*7,z-d/2);sc.add(q);SM.push(q)}});[-14,-10].forEach(o=>{const t=new THREE.Mesh(new THREE.CylinderGeometry(2.5,2.5,6,10),MT(0xb0bec5));t.position.set(x+o,3,z+d/2+4);sc.add(t)})}
  else if(id=='balai'){bx(w+5,.06,d+5,0xdcedc8,x,.06,z+2);bx(3,.08,5,0xd7ccc8,x,.1,fz+2.2);bd(x,z-1.2,w,4.6,3.4,c);bd(x-6.5,z-1.2,2.8,4.6,2.8,0xe1bee7);bd(x+6.5,z-1.2,2.8,4.6,2.8,0xe1bee7);bx(w+1,.3,3,0xefebe9,x,.15,z+2.6);for(let i=0;i<6;i++)bx(.35,3.4,.35,0xffffff,x-4+i*1.6,1.7,z+3.8);rf(w+2,7.8,2.6,r,x,3.4,z+.4);bx(3.2,.3,5,r,x-6.5,2.95,z-1.2);bx(3.2,.3,5,r,x+6.5,2.95,z-1.2);dr(x,z+1.14);wn(x-2.8,1.8,z+1.14);wn(x+2.8,1.8,z+1.14);wn(x-6.5,1.6,z+1.14);wn(x+6.5,1.6,z+1.14);fl(x+6,fz+3,5)}
  else if(id=='rusun'){bd(x,z,w,d,h,c);bx(w+.5,.4,d+.5,r,x,h+.2,z);const t=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1.8,10),MT(0xb0bec5));t.position.set(x+2.5,h+1.3,z);sc.add(t);for(let f=0;f<4;f++){const y=2.5+f*2.7;if(f){bx(w+.2,.15,1,0xeeeeee,x,y-.8,fz+.5);bx(w+.2,.5,.06,0x546e7a,x,y-.5,fz+.98)}[-2.8,0,2.8].forEach((o,i)=>{if(f||i!=1)wn(x+o,y+.2,fz+.06);wn(x+o,y+.2,z-d/2-.06)})}dr(x,fz+.06)}
 }
 let GR,HL,DL,WT,PS,gAx=0,LV=[],CR=[],TL=[],CA=[],LP=[],SM=[],mon=1,AC,MG,RG,bt=0,G=0,ME=null,ISG=0,MS=[];
-function world(){const L=(x,y,z,w,h,d,c)=>bx(w,h,d,c,x,y,z);
- L(0,.04,0,230,.06,6,0x45454a);L(0,.045,0,6,.06,230,0x45454a);
- [-1,1].forEach(s=>[-1,1].forEach(q=>{L(q*59.1,.07,s*4.2,109.8,.1,1.2,0xcfcfcf);L(s*4.2,.07,q*59.1,1.2,.1,109.8,0xcfcfcf)}));
- for(let i=-28;i<=28;i++)if(Math.abs(i*4)>8){L(i*4,.08,0,2,.02,.15,0xffffff);L(0,.08,i*4,.15,.02,2,0xffffff)}
+let LQ=[],LT,cm=0,cp=.85;
+function world(){const L=(x,y,z,w,h,d,c)=>bx(w,h,d,c,x,y,z),E=165;
+ L(0,.04,0,E*2+10,.06,6,0x45454a);L(0,.045,0,6,.06,E*2+10,0x45454a);
+ [-1,1].forEach(s=>[-1,1].forEach(q=>{L(q*84.9,.07,s*4.2,160.2,.1,1.2,0xcfcfcf);L(s*4.2,.07,q*84.9,1.2,.1,160.2,0xcfcfcf)}));
+ for(let i=-33;i<=33;i++)if(Math.abs(i*5)>8){L(i*5,.08,0,2.2,.02,.15,0xffffff);L(0,.08,i*5,.15,.02,2.2,0xffffff)}
  [-1,1].forEach(s=>{for(let k=0;k<6;k++){L(s*8,.085,-2.5+k,3,.02,.55,0xffffff);L(-2.5+k,.085,s*8,.55,.02,3,0xffffff)}});
  [[5.4,5.4,0],[-5.4,-5.4,0],[5.4,-5.4,1],[-5.4,5.4,1]].forEach(p=>{L(p[0],2,p[1],.2,4,.2,0x333333);L(p[0],4.3,p[1],.5,1.5,.5,0x222222);const ms=[0xff3b30,0xffd60a,0x34c759].map((c,i)=>{const m=new THREE.MeshBasicMaterial({color:c}),s=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),m);s.position.set(p[0],4.75-i*.45,p[1]);sc.add(s);return m});TL.push({ax:p[2],ms})});
- [[0,1,-90],[0,-1,70],[1,1,-70],[1,-1,95],[0,1,30],[1,-1,-30]].forEach((a,i)=>{const g=new THREE.Group(),b=new THREE.Mesh(new THREE.BoxGeometry(3.2,.9,1.6),MT([0xe53935,0x1e88e5,0xfdd835,0x43a047,0xfb8c00,0x8e24aa][i])),t=new THREE.Mesh(new THREE.BoxGeometry(1.6,.7,1.4),MT(0xb3e5fc));b.position.y=.7;t.position.set(-.2,1.4,0);g.add(b,t);g.rotation.y=a[0]?(a[1]>0?-Math.PI/2:Math.PI/2):(a[1]>0?0:Math.PI);sc.add(g);CA.push({g,ax:a[0],dir:a[1],p:a[2]})});
- for(let i=-4;i<=4;i++)if(i){const x=i*12,m=new THREE.MeshBasicMaterial({color:0x888888}),s=new THREE.Mesh(new THREE.SphereGeometry(.4,8,6),m);L(x,2.6,5.4,.15,5.2,.15,0x37474f);s.position.set(x,5.4,5.4);sc.add(s);LP.push(m)}
- WT=L(0,.03,60,230,.04,14,0x4fc3f7);L(-4.9,.6,60,.2,.8,14,0x8d6e4a);L(4.9,.6,60,.2,.8,14,0x8d6e4a);CL.push({x:-60,z:60,w:110.2,d:14},{x:60,z:60,w:110.2,d:14});
- for(let i=0;i<22;i++){const a=i/22*Math.PI*2,r=128+Math.random()*10,h=30+Math.random()*30,w=22+Math.random()*10,m=new THREE.Mesh(new THREE.ConeGeometry(w,h,6),MT(0x78909c)),s=new THREE.Mesh(new THREE.ConeGeometry(w*.38,h*.3,6),MT(0xffffff));m.position.set(Math.cos(a)*r,h/2,Math.sin(a)*r);s.position.set(m.position.x,h*.85,m.position.z);sc.add(m,s)}
- for(let i=0;i<3;i++)for(let j=0;j<3;j++){const x=48+i*21,z=-52-j*17;L(x,.08,z,19,.12,15,0x6d5a3a);CR.push(L(x,.5,z,17.5,.7,13.5,0x7cb342))}
- L(-70,.07,-72,36,.1,44,0x8d6e4a);for(let r=0;r<10;r++)CR.push(L(-70,.4,-52-r*4.2,32,.6,1.6,0x8bc34a));
- for(let i=0;i<5;i++)for(let j=0;j<4;j++){const x=48+i*10,z=18+j*8,t=new THREE.Mesh(new THREE.SphereGeometry(2.1,8,6),MT(0x43a047));L(x,.8,z,.5,1.6,.5,0x6d4c41);t.position.set(x,3,z);sc.add(t);LV.push(t);CL.push({x,z,w:1,d:1})}
- L(-72,4,40,24,8,14,0x9e9e9e);CL.push({x:-72,z:40,w:24,d:14});rf(25,14.5,3,0x546e7a,-72,8,40);
- [-80,-76,-64].forEach(x=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(.9,1.2,14,8),MT(0xb71c1c));c.position.set(x,7,33);sc.add(c);for(let k=0;k<2;k++){const s=new THREE.Mesh(new THREE.SphereGeometry(1.2,6,5),MT(0xcfd8dc));s.position.set(x,15+k*7,33);sc.add(s);SM.push(s)}});
- [-92,-88].forEach(x=>{const t=new THREE.Mesh(new THREE.CylinderGeometry(2.5,2.5,6,10),MT(0xb0bec5));t.position.set(x,3,48);sc.add(t)});
- label('🌾 Sawah',69,6,-70);label('🌽 Ladang',-70,5,-70);label('🍎 Kebun',68,7,30);label('🏭 Pabrik',-72,14,40);label('🌊 Sungai',20,4,60)}
+ [[0,1,-140],[0,-1,120],[1,1,-120],[1,-1,150],[0,1,30],[1,-1,-30],[0,-1,-60],[1,1,60]].forEach((a,i)=>{const g=new THREE.Group(),b=new THREE.Mesh(new THREE.BoxGeometry(3.2,.9,1.6),MT([0xe53935,0x1e88e5,0xfdd835,0x43a047,0xfb8c00,0x8e24aa][i%6])),t=new THREE.Mesh(new THREE.BoxGeometry(1.6,.7,1.4),MT(0xb3e5fc));b.position.y=.7;t.position.set(-.2,1.4,0);g.add(b,t);g.rotation.y=a[0]?(a[1]>0?-Math.PI/2:Math.PI/2):(a[1]>0?0:Math.PI);sc.add(g);CA.push({g,ax:a[0],dir:a[1],p:a[2]})});
+ for(let i=-11;i<=11;i++)if(i){const a=i*14,sg=i%2?1:-1;[[a,sg*5.6],[sg*5.6,a]].forEach(p=>{const m=new THREE.MeshBasicMaterial({color:0x666666}),s=new THREE.Mesh(new THREE.SphereGeometry(.4,8,6),m),q=new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}),c=new THREE.Mesh(new THREE.CircleGeometry(8,20),q);L(p[0],2.6,p[1],.15,5.2,.15,0x37474f);s.position.set(p[0],5.4,p[1]);c.rotation.x=-Math.PI/2;c.position.set(p[0],.15,p[1]);sc.add(s,c);LP.push(m);LQ.push(q)})}
+ WT=L(0,.03,60,E*2+10,.04,14,0x4fc3f7);L(-4.9,.6,60,.2,.8,14,0x8d6e4a);L(4.9,.6,60,.2,.8,14,0x8d6e4a);CL.push({x:-84.9,z:60,w:160.2,d:14},{x:84.9,z:60,w:160.2,d:14});
+ for(let i=0;i<30;i++){const a=i/30*Math.PI*2,r=205+Math.random()*12,h=40+Math.random()*35,w=30+Math.random()*14,m=new THREE.Mesh(new THREE.ConeGeometry(w,h,6),MT(0x78909c)),s=new THREE.Mesh(new THREE.ConeGeometry(w*.38,h*.3,6),MT(0xffffff));m.position.set(Math.cos(a)*r,h/2,Math.sin(a)*r);s.position.set(m.position.x,h*.85,m.position.z);sc.add(m,s)}
+ for(let i=0;i<3;i++)for(let j=0;j<4;j++){const x=100+i*21,z=-64-j*17;L(x,.08,z,19,.12,15,0x6d5a3a);CR.push(L(x,.5,z,17.5,.7,13.5,0x7cb342))}
+ L(-120,.07,-90,40,.1,60,0x8d6e4a);for(let r=0;r<13;r++)CR.push(L(-120,.4,-64-r*4.2,34,.6,1.6,0x8bc34a));
+ for(let i=0;i<5;i++)for(let j=0;j<4;j++){const x=88+i*10,z=14+j*9,t=new THREE.Mesh(new THREE.SphereGeometry(2.1,8,6),MT(0x43a047));L(x,.8,z,.5,1.6,.5,0x6d4c41);t.position.set(x,3,z);sc.add(t);LV.push(t);CL.push({x,z,w:1,d:1})}
+ label('\ud83c\udf3e Sawah',121,6,-90);label('\ud83c\udf3d Ladang',-120,5,-90);label('\ud83c\udf4e Kebun',108,7,28);label('\ud83c\udf0a Sungai',30,4,60);
+ drawPlots()}
 const SN=[['🌸','Semi',0x8fd68a,0x9ccc65,0xf48fb1],['☀️','Panas',0x86d15a,0x7cb342,0x2e9e5b],['🌧️','Hujan',0x5fae63,0x558b2f,0x2e7d32],['🍂','Gugur',0xb59a52,0xe0b84a,0xe65100],['❄️','Salju',0xeef4f8,0xe8eef2,0xf5fbff]],K=[[0,0x0b1026],[5,0x0b1026],[6.5,0xffb27a],[8,0x9fdcff],[16.5,0x9fdcff],[18,0xff8a5c],[19.5,0x0b1026],[24,0x0b1026]];
 function skyC(h){for(let i=1;i<K.length;i++)if(h<=K[i][0]){const a=K[i-1],b=K[i];return new THREE.Color(a[1]).lerp(new THREE.Color(b[1]),(h-a[0])/(b[0]-a[0]))}return new THREE.Color(K[0][1])}
-function env(dt){const n=Date.now(),si=Math.floor(n/240000)%5,s=SN[si],h=(()=>{const d=new Date();return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600})(),df=Math.max(0,Math.sin((h-6)/12*Math.PI)),dm=si==2?.6:si==4?.8:1,sk=skyC(h).lerp(new THREE.Color(0x8a97a6),si==2?.45:si==4?.3:0),a=(h-6)/12*Math.PI,lp=(m,c)=>m.material.color.lerp(new THREE.Color(c),.03);
- sc.background.copy(sk);sc.fog.color.copy(sk);sc.fog.near=si==2?30:si==4?35:55;sc.fog.far=si==2?85:si==4?90:140;HL.intensity=.3+.6*df*dm;DL.intensity=.08+.65*df*dm;DL.position.set(Math.cos(a)*50,Math.sin(a)*50+5,20);
- lp(GR,s[2]);CR.forEach(m=>lp(m,s[3]));LV.forEach(m=>lp(m,s[4]));lp(WT,si==4?0xdff3ff:si==2?0x3a8fb7:0x4fc3f7);LP.forEach(m=>m.color.setHex(df<.2?0xfff176:0x888888));
+function env(dt){const n=Date.now(),si=Math.floor(n/600000)%5,s=SN[si],h=(()=>{const d=new Date();return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600})(),df=Math.max(0,Math.sin((h-6)/12*Math.PI)),dm=si==2?.6:si==4?.8:1,sk=skyC(h).lerp(new THREE.Color(0x8a97a6),si==2?.45:si==4?.3:0),a=(h-6)/12*Math.PI,lp=(m,c)=>m.material.color.lerp(new THREE.Color(c),.03);
+ sc.background.copy(sk);sc.fog.color.copy(sk);sc.fog.near=si==2?30:si==4?35:55;sc.fog.far=si==2?85:si==4?90:140;HL.intensity=.4+.55*df*dm;DL.intensity=.08+.65*df*dm;DL.position.set(Math.cos(a)*50,Math.sin(a)*50+5,20);
+ lp(GR,s[2]);CR.forEach(m=>lp(m,s[3]));LV.forEach(m=>lp(m,s[4]));lp(WT,si==4?0xdff3ff:si==2?0x3a8fb7:0x4fc3f7);const nf=1-Math.min(1,df*4);LP.forEach(m=>m.color.setHex(nf>.5?0xfff176:0x666666));LQ.forEach(m=>m.opacity=.32*nf);if(LT)LT.intensity=nf*.8;
  const C=[[0xffb7c5,.35,1.2],[0,0,0],[0x9ec5ff,.18,24],[0xe67e22,.4,1.6],[0xffffff,.35,2.6]][si];
  if(!PS){const g=new THREE.BufferGeometry(),p=new Float32Array(900);for(let i=0;i<900;i+=3){p[i]=rnd(-30,30);p[i+1]=rnd(0,25);p[i+2]=rnd(-30,30)}g.setAttribute('position',new THREE.BufferAttribute(p,3));PS=new THREE.Points(g,new THREE.PointsMaterial({size:.2}));PS.frustumCulled=false;sc.add(PS)}
  PS.visible=!!C[1];if(C[1]){PS.material.color.setHex(C[0]);PS.material.size=C[1];const p=PS.geometry.attributes.position,q=p.array;PS.position.set(pl.position.x,0,pl.position.z);for(let i=0;i<q.length;i+=3){q[i+1]-=C[2]*dt;if(si!=2)q[i]+=Math.sin(q[i+1]+i)*dt*.8;if(q[i+1]<0)q[i+1]=25}p.needsUpdate=true}
  const w=$('#wx');if(w)w.textContent=s[0]+' '+s[1]+' · '+String(Math.floor(h)).padStart(2,'0')+':'+String(Math.floor(h%1*60)).padStart(2,'0')+' '+(h>=5&&h<10?'Pagi':h>=10&&h<15?'Siang':h>=15&&h<18?'Sore':'Malam');if(RG)RG.gain.value=mon&&si==2?.1:0}
 function lights(){const t=Date.now(),r=8000-t%8000;gAx=Math.floor(t/8000)%2;TL.forEach(l=>{const g=gAx==l.ax,y=g&&r<1500;l.ms[0].color.setHex(g?0x331111:0xff3b30);l.ms[1].color.setHex(y?0xffd60a:0x333311);l.ms[2].color.setHex(g&&!y?0x34c759:0x113311)})}
-function cars(dt){CA.forEach(c=>{const nx=c.p*c.dir;if(!(gAx!=c.ax&&nx>-8.6&&nx<-6.8))c.p+=c.dir*7*dt;if(Math.abs(c.p)>112)c.p=-c.dir*110;const q=c.dir*1.5;c.g.position.set(c.ax?-q:c.p,0,c.ax?c.p:q)})}
+function cars(dt){CA.forEach(c=>{const nx=c.p*c.dir;if(!(gAx!=c.ax&&nx>-8.6&&nx<-6.8))c.p+=c.dir*7*dt;if(Math.abs(c.p)>168)c.p=-c.dir*166;const q=c.dir*1.5;c.g.position.set(c.ax?-q:c.p,0,c.ax?c.p:q)})}
 function tickW(dt){if(!GR)return;env(dt);cars(dt);lights();SM.forEach(s=>{s.position.y+=dt*2;s.scale.setScalar(1+(s.position.y-15)*.12);if(s.position.y>30)s.position.y=15})}
 function music(){if(AC)return;AC=new(window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=mon?.12:0;MG.connect(AC.destination);const ch=[[261.6,329.6,392,493.9],[220,261.6,329.6,392],[174.6,220,261.6,329.6],[196,246.9,293.7,392]],pe=[523.3,587.3,659.3,784,880,1046.5],nt=(f,t,d,ty,v)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.05);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(MG);o.start(t);o.stop(t+d+.1)},step=()=>{if(!mon)return;const t=AC.currentTime+.05;ch[bt%4].forEach(f=>nt(f/2,t,3.4,'sine',.18));for(let i=0;i<4;i++)if(Math.random()<.7)nt(pe[Math.floor(Math.random()*6)],t+i*.85,1.6,'triangle',.12);bt++};step();setInterval(step,3400);
  const nb=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;const ns=AC.createBufferSource(),lf=AC.createBiquadFilter();ns.buffer=nb;ns.loop=true;lf.type='lowpass';lf.frequency.value=1400;RG=AC.createGain();RG.gain.value=0;ns.connect(lf);lf.connect(RG);RG.connect(AC.destination);ns.start()}
 A.snd=()=>{mon=!mon;if(mon&&!AC)music();if(MG)MG.gain.value=mon?.12:0;hud()};
 document.addEventListener('pointerdown',()=>{if(mon&&!AC)music();if(AC&&AC.state=='suspended')AC.resume()});
-async function init2(){const e=$('#er'),b=$('#gb');b.disabled=true;e.textContent='Menghubungkan ke desa...';try{const r=await Promise.all([SVrt.use('db'),SVrt.use('user'),SVrt.use('room')]);DB=r[0];RM=r[2];UID=r[1]&&await r[1].id();ISG=r[1]?!!(await r[1].canEdit()):0;if(!DB||!UID){e.textContent='Gagal masuk. Muat ulang halaman lalu login kembali.';return}net();
+async function init2(){const e=$('#er'),b=$('#gb');b.disabled=true;e.textContent='Menghubungkan ke desa...';try{const r=await Promise.all([SVrt.use('db'),SVrt.use('user'),SVrt.use('room')]);DB=r[0];RM=r[2];UID=r[1]&&await r[1].id();ISG=r[1]?!!(await r[1].canEdit()):0;USR=r[1];ISD=r[1]&&r[1].isDev?!!(await r[1].isDev()):0;if(!DB||!UID){e.textContent='Gagal masuk. Muat ulang halaman lalu login kembali.';return}net();
  cl('missions').onSnapshot(s=>{MS=s.docs.map(d=>({id:d.id,...d.data()}));for(let i=M.length;i--;)if(M[i].cu)M.splice(i,1);MS.forEach(d=>{if(!d.a||!P[d.pf])return;const p=(d.id.charCodeAt(0)+d.id.length)%3,x=d.a.slice(1);M.push({id:'c'+d.id,cu:1,t:d.t,loc:'kerja',topic:P[d.pf][1],pf:d.pf,coin:d.coin,xp:d.xp,mat:d.m||'',c:d.c,q:d.q,o:[...x.slice(0,p),d.a[0],...x.slice(p)].map((t,j)=>[t,j==p?2:0]),e:d.e})});if(G)gd()},()=>{});
  const s=await cl('citizens').doc(UID).get();e.textContent='';ME=s.exists?unpack(s.data()):null;if(ME&&!ISG){S=ME;return start()}$('#rg').style.display=ME?'none':'grid';b.disabled=false;if(ISG)$('#gu').style.display='block'}catch(x){e.textContent='Gagal terhubung ke desa. Muat ulang halaman.'}}
 A.guru=()=>{G=1;$('#au').style.display='none';const d=$('#gd');d.style.display='block';if(RM)RM.onPeers(c=>{RP={};c.peers.forEach(p=>{if(!p.isMe&&p.presence&&p.presence.n)RP[p.peer]=1});gd()});d.innerHTML=`<h2>🧑‍🏫 Dashboard Guru</h2><div id='gl'></div><h3>➕ Tambah Misi / Materi</h3><div class='f'><input id='gt' placeholder='Judul misi'><input id='gm' placeholder='Materi singkat'><input id='gc' placeholder='Kasus / fenomena sosial'><input id='gq' placeholder='Pertanyaan'><input id='ga0' placeholder='Jawaban BENAR'><input id='ga1' placeholder='Jawaban salah 1'><input id='ga2' placeholder='Jawaban salah 2'><input id='ge' placeholder='Penjelasan konsep'><select id='gp'>${P.map((p,i)=>`<option value='${i}'>${p[1]}</option>`).join('')}</select><input id='gk' type='number' placeholder='Hadiah koin (maks 300)'><input id='gx' type='number' placeholder='Hadiah XP (maks 200)'><button data-a='am2'>Simpan Misi</button><small id='gs'></small></div><br><button data-a='gout' style='background:#d64545'>Keluar</button>`;gd()};
@@ -418,8 +451,8 @@ A.dn=k=>{if(spend(25,'Donasi untuk warga')){cl('donations').add({to:k,from:S.n,a
 A.claim=()=>{const got=DN.filter(d=>d.to==S.k).reduce((s,d)=>s+d.amt,0)-(S.dc||0);if(got<=0)return;S.dc=(S.dc||0)+got;gain(got,0,'Donasi diterima');go('rs')};
 A.rsb=()=>go('rs');const bh0=bh;bh=function(id){return bh0(id)+(id=='puskesmas'?`<h3>🏥 Layanan Kesehatan</h3><button data-a='rsb'>Buka Layanan Puskesmas</button>`:'')};
 const net0=net;net=function(){net0();cl('donations').onSnapshot(s=>{DN=s.docs.map(d=>d.data());if(PK=='rs'&&S)go('rs')},()=>{})};
-function crash(){hurt=1;S.hp=Math.max(10,(S.hp||100)-60);S.bill=S.bill||150;save();$('#fl').style.opacity=.6;setTimeout(()=>$('#fl').style.opacity=0,500);toast('🚑 Kamu tertabrak mobil! Dibawa ke Puskesmas.');pl.position.set(-10,0,-23);setTimeout(()=>go('rs'),700);setTimeout(()=>hurt=0,6000)}
-cars=function(dt){CA.forEach(c=>{const nx=c.p*c.dir,mv=!(gAx!=c.ax&&nx>-8.6&&nx<-6.8);if(mv)c.p+=c.dir*7*dt;if(Math.abs(c.p)>112)c.p=-c.dir*110;const q=c.dir*1.5,g=c.g.position;g.set(c.ax?-q:c.p,0,c.ax?c.p:q);if(mv&&S&&!PK&&!hurt&&pl){const x=pl.position.x,z=pl.position.z,zb=(Math.abs(Math.abs(x)-8)<1.7&&Math.abs(z)<3.4)||(Math.abs(Math.abs(z)-8)<1.7&&Math.abs(x)<3.4);if(!zb&&Math.abs(x-g.x)<(c.ax?1.3:2.2)&&Math.abs(z-g.z)<(c.ax?2.2:1.3))crash()}})};
+function crash(){hurt=1;S.hp=Math.max(10,(S.hp||100)-60);S.bill=S.bill||150;save();$('#fl').style.opacity=.6;setTimeout(()=>$('#fl').style.opacity=0,500);toast('🚑 Kamu tertabrak mobil! Dibawa ke Puskesmas.');pl.position.set(-14,0,-7.5);setTimeout(()=>go('rs'),700);setTimeout(()=>hurt=0,6000)}
+cars=function(dt){CA.forEach(c=>{const nx=c.p*c.dir,mv=!(gAx!=c.ax&&nx>-8.6&&nx<-6.8);if(mv)c.p+=c.dir*7*dt;if(Math.abs(c.p)>168)c.p=-c.dir*166;const q=c.dir*1.5,g=c.g.position;g.set(c.ax?-q:c.p,0,c.ax?c.p:q);if(mv&&S&&!PK&&!hurt&&pl){const x=pl.position.x,z=pl.position.z,zb=(Math.abs(Math.abs(x)-8)<1.7&&Math.abs(z)<3.4)||(Math.abs(Math.abs(z)-8)<1.7&&Math.abs(x)<3.4);if(!zb&&Math.abs(x-g.x)<(c.ax?1.3:2.2)&&Math.abs(z-g.z)<(c.ax?2.2:1.3))crash()}})};
 const k0=T.ktp;T.ktp=()=>k0()+`<h3>💾 Progres</h3><small>Tersimpan otomatis ke akunmu (terakhir ${new Date(lastSv).toLocaleTimeString('id-ID')}). Progres terikat ke email akunmu.</small><button data-a='sv'>💾 Simpan Progres Sekarang</button> <button data-a='lv' style='background:#d64545'>🚪 Keluar dari Desa</button>`;
 A.sv=()=>{clearTimeout(save.t);cl('citizens').doc(UID).set(pack(S)).then(()=>{lastSv=Date.now();toast('💾 Progres tersimpan ke akunmu');go('ktp')}).catch(()=>toast('Gagal menyimpan'))};
 A.lv=()=>show(`<h2>🚪 Keluar dari Desa?</h2><p>Terima kasih telah menjadi warga SOSIOVILLAGE. Jika kamu keluar, <b>KTP, koin, XP, rumah, dan seluruh progresmu dihapus permanen</b>. Ini berbeda dengan Simpan Progres: progres hanya aman selama kamu masih menjadi warga.</p><button data-a='lvy' style='background:#d64545'>Ya, hapus progres & keluar</button> <button data-a='back'>Batal</button>`);
@@ -427,13 +460,13 @@ A.lvy=async()=>{clearTimeout(save.t);const u=UID;try{await cl('citizens').doc(u)
 setInterval(()=>{if(S&&DB&&UID)cl('citizens').doc(UID).set(pack(S)).then(()=>{lastSv=Date.now()}).catch(()=>{})},30000);addEventListener('pagehide',()=>{if(S&&DB&&UID)cl('citizens').doc(UID).set(pack(S))});
 function build(){R=new THREE.WebGLRenderer({canvas:$('#cv'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));sc=new THREE.Scene();sc.background=new THREE.Color(0x9fdcff);sc.fog=new THREE.Fog(0x9fdcff,50,110);cam=new THREE.PerspectiveCamera(50,1,.1,200);
  HL=new THREE.HemisphereLight(0xffffff,0x6aa84f,.9);sc.add(HL);DL=new THREE.DirectionalLight(0xffffff,.6);DL.position.set(20,40,10);sc.add(DL);
- GR=bx(300,.2,300,0x7ccf6a,0,-.1,0);world();
+ GR=bx(460,.2,460,0x7ccf6a,0,-.1,0);world();
  B.forEach(b=>{if(b.h){mkB(b)}else{bx(b.w,.15,b.d,0x8bd47a,b.x,.1,b.z);for(let i=0;i<3;i++)bx(2,.5,.8,0x8d6e4a,b.x-3+i*3,.5,b.z-2);bx(4,.3,4,0x4fc3f7,b.x,.3,b.z+1);bx(1,1,1,0xcfd8dc,b.x,.8,b.z+1);CL.push({x:b.x,z:b.z+1,w:4,d:4})}
   b.dx=b.x;b.dz=b.z+b.d/2+2.2;label(b.n,b.x,(b.h||2)+4,b.z);const rg=new THREE.Mesh(new THREE.RingGeometry(1,1.5,24),new THREE.MeshBasicMaterial({color:0xffd23f,side:2}));rg.rotation.x=-Math.PI/2;rg.position.set(b.dx,.12,b.dz);sc.add(rg);ring.push(rg)});
- for(let i=0,n=0;n<55&&i<500;i++){const x=rnd(-48,48),z=rnd(-48,48);if(Math.abs(x)<6||Math.abs(z)<6||B.some(b=>Math.abs(x-b.x)<b.w/2+4&&Math.abs(z-b.z)<b.d/2+6)||Math.hypot(x,z-6)<5)continue;n++;bx(.5,1.4,.5,0x795548,x,.7,z);const t=new THREE.Mesh(new THREE.ConeGeometry(1.6,3.6,7),MT(Math.random()<.5?0x2e9e5b:0x43b86a));t.position.set(x,3,z);sc.add(t);LV.push(t);CL.push({x,z,w:1.2,d:1.2})}
- pl=person(S.col,S.skin);pl.position.set(0,0,6);pl.b.material.color.set(S.col);tag(pl,S.n);
+ for(let i=0,n=0;n<170&&i<2500;i++){const x=rnd(-150,150),z=rnd(-150,150);if(Math.abs(x)<7||Math.abs(z)<7||B.some(b=>Math.abs(x-b.x)<b.w/2+6&&Math.abs(z-b.z)<b.d/2+8)||(Math.abs(x)<62&&z>10&&z<50)||(z>50&&z<70)||(x>85&&x<155&&z<-55&&z>-120)||(x<-95&&x>-145&&z<-55&&z>-120)||(x>82&&x<132&&z>10&&z<46)||Math.hypot(x-62,z+7)<6)continue;n++;bx(.5,1.4,.5,0x795548,x,.7,z);const t=new THREE.Mesh(new THREE.ConeGeometry(1.6,3.6,7),MT(Math.random()<.5?0x2e9e5b:0x43b86a));t.position.set(x,3,z);sc.add(t);LV.push(t);CL.push({x,z,w:1.2,d:1.2})}
+ pl=person(S.col,S.skin);pl.position.set(62,0,-7.2);pl.b.material.color.set(S.col);tag(pl,S.n);LT=new THREE.PointLight(0xffe0a0,0,22);LT.position.y=3;pl.add(LT);
  for(let i=0;i<0;i++){const g=person(COL[i%6],SKN[i%3]);g.ax=i%2;g.t=0;g.position.set(g.ax?(i%4<2?1.2:-1.2):rnd(-30,30),0,g.ax?rnd(-30,30):(i%4<2?1.2:-1.2));NP.push(g)}
- const cv=$('#cv');let dr=null;cv.onpointerdown=e=>{dr=e.clientX;cv.setPointerCapture(e.pointerId)};cv.onpointermove=e=>{if(dr!=null&&!PK){cy-=(e.clientX-dr)*.006;dr=e.clientX}};cv.onpointerup=()=>dr=null;cv.onwheel=e=>A.zm(e.deltaY>0?1:-1);
+ const cv=$('#cv');let dr=null;let dy0=0;cv.onpointerdown=e=>{dr=e.clientX;dy0=e.clientY;cv.setPointerCapture(e.pointerId)};cv.onpointermove=e=>{if(dr!=null&&!PK){cy-=(e.clientX-dr)*.006;cp=Math.max(.1,Math.min(1.5,cp+(e.clientY-dy0)*.005));dr=e.clientX;dy0=e.clientY}};cv.onpointerup=()=>dr=null;cv.onwheel=e=>A.zm(e.deltaY>0?1:-1);
  const js=$('#js'),kn=$('#kn');let jp=null;const jm=e=>{const r=js.getBoundingClientRect();let x=e.clientX-r.left-55,y=e.clientY-r.top-55;const l=Math.hypot(x,y);if(l>45){x*=45/l;y*=45/l}kn.style.transform=`translate(${x}px,${y}px)`;jx=x/45;jy=-y/45};
  js.onpointerdown=e=>{jp=e.pointerId;js.setPointerCapture(jp);jm(e)};js.onpointermove=e=>{if(e.pointerId==jp)jm(e)};js.onpointerup=js.onpointercancel=()=>{jp=null;jx=jy=0;kn.style.transform=''};
  const rs=()=>{R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener('resize',rs);rs();requestAnimationFrame(loop)}
@@ -441,15 +474,101 @@ const hit=(x,z)=>CL.some(c=>Math.abs(x-c.x)<c.w/2+.6&&Math.abs(z-c.z)<c.d/2+.6);
 function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-lt)/1000||0);lt=t;let mvg=0;
  if(S&&!PK){let ix=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+jx,iy=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)+jy;const l=Math.hypot(ix,iy);
   if(l>.1){if(l>1){ix/=l;iy/=l}mvg=1;const dx=(-Math.sin(cy)*iy+Math.cos(cy)*ix)*7*dt,dz=(-Math.cos(cy)*iy-Math.sin(cy)*ix)*7*dt;
-   if(!hit(pl.position.x+dx,pl.position.z))pl.position.x=Math.max(-105,Math.min(105,pl.position.x+dx));if(!hit(pl.position.x,pl.position.z+dz))pl.position.z=Math.max(-105,Math.min(105,pl.position.z+dz));
+   if(!hit(pl.position.x+dx,pl.position.z))pl.position.x=Math.max(-160,Math.min(160,pl.position.x+dx));if(!hit(pl.position.x,pl.position.z+dz))pl.position.z=Math.max(-160,Math.min(160,pl.position.z+dz));
    let a=Math.atan2(dx,dz),d=a-pl.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));pl.rotation.y+=d*.25}}
  pl.position.y=mvg?Math.abs(Math.sin(t/70))*.18:0;netTick(t);tickW(dt);
  NP.forEach(n=>{if(!n.go||Math.abs(n.go-(n.ax?n.position.z:n.position.x))<.3)n.go=rnd(-34,34);const p=n.ax?'z':'x',d=n.go-n.position[p];n.position[p]+=Math.sign(d)*2*dt;n.rotation.y=n.ax?(d>0?0:Math.PI):(d>0?1.57:-1.57);n.position.y=Math.abs(Math.sin(t/90+n.ax))*.12});
  near=null;B.forEach((b,i)=>{ring[i].scale.setScalar(1+Math.sin(t/200)*.15);if(!PK&&Math.hypot(pl.position.x-b.dx,pl.position.z-b.dz)<4.5)near=b});
  const mb=$('#mb');mb.style.display=near?'block':'none';if(near)mb.textContent='MASUK: '+near.n;
- cam.position.set(pl.position.x+Math.sin(cy)*13*zm,13*zm,pl.position.z+Math.cos(cy)*13*zm);cam.lookAt(pl.position.x,1,pl.position.z);R.render(sc,cam)}
+ camUpd();R.render(sc,cam)}
 function start(){$('#au').style.display='none';['hd','nv'].forEach(i=>$('#'+i).style.display='flex');$('#js').style.display='block';$('#rb').style.display='flex';
  if(!built){built=1;try{build()}catch(e){$('#ts').textContent='WebGL tidak tersedia di perangkat ini.';$('#ts').style.display='block'}}
- if(RM&&sc){RM.onPeers(sync);sync({peers:RM.peers()})}hud();toast(`Selamat datang, ${S.n}! Jelajahi desa dan tekan MASUK di dekat bangunan.`)}
+ hurt=1;setTimeout(()=>hurt=0,6000);if(RM&&sc){RM.onPeers(sync);sync({peers:RM.peers()})}hud();toast(`Selamat datang, ${S.n}! Jelajahi desa dan tekan MASUK di dekat bangunan.`)}
+/* ===== v3: fitur tambahan ===== */
+let ISD=0,USR=null,CX=null,PL=[],PG=null,UN=0,seen=0,leaving=0;
+const dsl=c=>c<=500?1:Math.min(10,1+Math.ceil((c-500)/500)),DK=['Rintisan','Berkembang','Mandiri','Mapan','Sejahtera','Makmur','Unggul','Utama','Elite','Sultan'];
+const shuf=a=>{a=[...a];for(let i=a.length;i-->1;){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+P.push(['\ud83d\udc51','Kepala Desa','Memimpin pemerintahan desa dan menyejahterakan warga.'],['\ud83d\uddc2\ufe0f','Sekretaris Desa','Mengelola administrasi, data, dan arsip desa.'],['\ud83c\udfd8\ufe0f','Ketua RT','Melayani dan membina warga di lingkungan terkecil.'],['\ud83c\udfdb\ufe0f','Ketua RW','Mengoordinasikan beberapa RT demi kepentingan bersama.']);
+const KQ2=[[
+['Warga menolak program pembangunan karena tidak diajak bicara.|Langkah awal paling tepat bagi kepala desa?',['Menggelar musyawarah desa untuk mendengar warga','Menjalankan program secepatnya','Mengganti seluruh perangkat desa','Menunda semua kegiatan desa'],'Musyawarah desa adalah wadah partisipasi warga dalam keputusan.'],
+['Dana desa dipakai membangun jalan tanpa laporan kepada warga.|Prinsip tata kelola apa yang dilanggar?',['Transparansi dan akuntabilitas','Efisiensi anggaran','Kecepatan layanan','Keseragaman program'],'Dana publik wajib dilaporkan terbuka kepada warga.'],
+['Dua dusun berselisih soal air irigasi.|Apa peran kepala desa?',['Memfasilitasi mediasi hingga mufakat','Memihak dusun yang lebih besar','Menyerahkan ke aparat tanpa dialog','Membiarkan hingga reda sendiri'],'Kepala desa menjadi penengah adil lewat musyawarah.'],
+['Banyak pemuda menganggur sementara lahan desa tidak terpakai.|Kebijakan yang selaras dengan pemberdayaan?',['Mendirikan BUMDes yang melibatkan pemuda','Melarang pemuda merantau','Menjual lahan ke pihak luar','Memberi bantuan tunai tanpa syarat'],'BUMDes membuka kerja dan memperkuat ekonomi lokal.'],
+['Warga lansia kesulitan mengurus surat karena kantor desa jauh.|Solusi pelayanan publik yang inklusif?',['Layanan jemput bola dan pos pelayanan dusun','Menambah syarat dokumen','Memperpendek jam layanan','Meminta anaknya saja yang datang'],'Pelayanan inklusif menjangkau kelompok yang sulit mengakses.'],
+['Tradisi kerja bakti ditinggalkan warga pendatang baru.|Pendekatan sosiologis yang tepat?',['Mengintegrasikan warga baru lewat kegiatan bersama','Mewajibkan denda besar','Menghapus kerja bakti','Memisahkan kegiatan warga lama dan baru'],'Integrasi sosial tumbuh dari interaksi dan tujuan bersama.'],
+['Sebuah kebijakan diprotes karena hanya menguntungkan keluarga perangkat desa.|Masalah apa yang muncul?',['Nepotisme yang merusak keadilan sosial','Disiplin anggaran','Modernisasi desa','Diferensiasi jabatan'],'Nepotisme memberi keuntungan berdasar kedekatan, bukan kebutuhan.'],
+['Banjir tahunan merusak rumah warga di bantaran sungai.|Prioritas kepala desa?',['Mitigasi bersama warga dan relokasi bertahap','Menyalahkan warga bantaran','Menunggu bantuan dari luar','Menutup akses ke sungai'],'Penanganan bencana memadukan pencegahan dan keterlibatan warga.'],
+['Keluarga miskin tidak masuk daftar bantuan sosial.|Tindakan terbaik?',['Verifikasi data lewat RT/RW dan musyawarah','Memakai data lama','Membatasi jumlah pendaftar','Menghentikan bantuan'],'Pendataan partisipatif membuat sasaran bantuan tepat.'],
+['Kepala desa ingin melestarikan seni lokal sekaligus menarik wisatawan.|Strategi yang menjaga budaya?',['Wisata budaya yang dikelola warga setempat','Menyewakan seni ke pihak luar','Mengubah seni sesuai selera turis','Melarang semua pertunjukan'],'Pengelolaan oleh warga menjaga makna budaya dan manfaat ekonomi.']],[
+['Surat keterangan warga sering hilang karena tidak diarsipkan.|Perbaikan oleh sekretaris desa?',['Menyusun sistem arsip dan registrasi surat','Menyuruh warga menyimpan sendiri','Mengurangi jenis surat','Menghapus surat lama'],'Tata persuratan tertib membuat dokumen mudah ditelusuri.'],
+['Data jumlah penduduk berbeda antara RT dan kantor desa.|Tindakan yang tepat?',['Memutakhirkan data dengan verifikasi lapangan','Memakai angka terbesar','Membuang data RT','Membiarkan perbedaan'],'Data kependudukan akurat membuat kebijakan tepat sasaran.'],
+['Rapat desa berlangsung lama tetapi tidak ada catatan keputusan.|Apa tugas sekretaris?',['Menyusun notulen dan berita acara','Menghentikan rapat','Memutuskan hasil sendiri','Mengundang lebih banyak peserta'],'Notulen menjadi bukti keputusan bersama.'],
+['Laporan dana desa harus diketahui warga.|Cara yang mendukung keterbukaan?',['Memasang rincian di papan informasi dan balai desa','Menyimpan di lemari kantor','Melapor hanya ke kecamatan','Menunggu ada yang bertanya'],'Informasi publik harus mudah diakses warga.'],
+['Warga mengeluh syarat pengurusan surat berbelit.|Perbaikan layanan?',['Menyederhanakan alur dan mengumumkan persyaratan','Menambah formulir','Membatasi hari layanan','Mengalihkan ke desa lain'],'Birokrasi sederhana meningkatkan kepercayaan warga.'],
+['Seorang warga meminta data pribadi tetangganya.|Sikap sekretaris desa?',['Menolak dan menjaga kerahasiaan data pribadi','Memberikan karena sesama warga','Menjual datanya','Menyebarkan ke grup warga'],'Data pribadi dilindungi dan dibuka sesuai aturan.'],
+['Jadwal program desa saling bertabrakan.|Peran perencanaan sekretaris?',['Menyusun kalender kegiatan terpadu','Membatalkan separuh program','Membiarkan bentrok','Menyerahkan ke tiap dusun tanpa koordinasi'],'Koordinasi administratif mencegah tumpang tindih program.'],
+['Peraturan desa baru perlu diketahui semua warga.|Langkah sosialisasi?',['Pengumuman lewat balai desa, RT/RW, dan media warga','Menyimpan di arsip','Mengumumkan sekali saja','Menunggu warga bertanya'],'Sosialisasi berlapis memastikan semua warga paham.'],
+['Banyak lansia belum memiliki dokumen kependudukan.|Tindakan?',['Mendata dan membantu pengurusan dokumen','Mengabaikan karena sudah tua','Menunda sampai ada anggaran','Meminta mereka mengurus ke kota'],'Dokumen kependudukan membuka akses layanan dan bantuan.'],
+['Dua perangkat desa saling menyalahkan soal pekerjaan terlambat.|Peran sekretaris?',['Memperjelas pembagian tugas dan alur kerja','Menegur di depan umum','Mengambil alih semua tugas','Menunggu mereka selesai sendiri'],'Pembagian peran jelas mengurangi konflik kerja.']],[
+['Warga baru pindah ke lingkungan RT.|Sikap ketua RT yang baik?',['Menyambut, mencatat, dan memperkenalkan ke warga','Mengabaikan sampai ada masalah','Meminta uang pendaftaran besar','Melarang bergaul'],'Penyambutan membangun integrasi sosial.'],
+['Dua tetangga bertengkar soal batas pagar.|Langkah ketua RT?',['Memediasi kedua pihak secara kekeluargaan','Memihak yang lebih akrab','Melapor tanpa bicara dulu','Membiarkan saja'],'Mediasi kekeluargaan sesuai nilai musyawarah.'],
+['Sampah menumpuk di ujung gang.|Tindakan RT yang partisipatif?',['Mengajak warga menyepakati jadwal dan iuran kebersihan','Memarahi satu warga','Menutup gang','Membakar sampah'],'Kesepakatan bersama menumbuhkan tanggung jawab kolektif.'],
+['Ada warga sakit dan tidak mampu berobat.|Peran RT?',['Menggerakkan bantuan warga dan menghubungkan ke layanan kesehatan','Menyuruh keluarga mengurus sendiri','Mengumumkan keadaannya','Menunggu laporan ke kelurahan'],'Solidaritas dan akses layanan meringankan beban warga.'],
+['Ronda malam mulai sepi peserta.|Cara menghidupkan kembali?',['Membuat jadwal adil dan bergiliran','Menghapus ronda','Memaksa tanpa musyawarah','Menyewa orang luar saja'],'Jadwal adil menjaga partisipasi dan rasa aman.'],
+['Seorang warga berbeda keyakinan merasa dikucilkan.|Sikap ketua RT?',['Menjaga toleransi dan melindungi hak semua warga','Mendukung pengucilan','Menyuruhnya pindah','Tidak peduli'],'Toleransi menjaga kerukunan masyarakat majemuk.'],
+['Pengurusan surat pengantar sering terlambat.|Perbaikan?',['Menetapkan jadwal layanan dan mencatat permohonan','Menolak semua permohonan','Meminta bayaran khusus','Mengalihkan ke RW terus'],'Pelayanan tertib memudahkan warga.'],
+['Remaja nongkrong sampai larut dan mengganggu.|Pendekatan yang membina?',['Mengajak remaja membuat kegiatan karang taruna','Memarahi di depan umum','Mengusir dari lingkungan','Langsung melapor polisi'],'Pembinaan menyalurkan energi remaja secara positif.'],
+['Penggunaan iuran warga dipertanyakan.|Langkah ketua RT?',['Melaporkan pemasukan dan pengeluaran secara terbuka','Menolak menjawab','Menaikkan iuran','Menyimpan sendiri catatan'],'Transparansi menjaga kepercayaan warga.'],
+['Saluran air lingkungan tersumbat saat musim hujan.|Tindakan?',['Mengorganisir kerja bakti membersihkan saluran','Menunggu pemerintah','Menyalahkan RT sebelah','Menutup saluran'],'Gotong royong mencegah banjir lingkungan.']],[
+['Tiga RT punya program kebersihan yang berbeda-beda.|Peran ketua RW?',['Mengoordinasikan agar program selaras','Menghentikan program RT','Memilih satu RT saja','Membiarkan tanpa koordinasi'],'RW mengoordinasikan RT demi tujuan bersama.'],
+['Dua RT berebut lapangan untuk acara.|Langkah RW?',['Menyusun jadwal bersama lewat musyawarah','Memberikan ke RT terdekat','Menutup lapangan','Menyerahkan ke desa'],'Penjadwalan adil menyelesaikan konflik fasilitas bersama.'],
+['Warga RW ingin membangun pos kamling.|Alur yang tepat?',['Musyawarah RW, kesepakatan, lalu usulan ke desa','Langsung membangun tanpa izin','Menunggu desa memerintah','Meminta dana RT lain'],'Perencanaan partisipatif dan prosedural.'],
+['Banyak warga RW kehilangan pekerjaan.|Upaya RW?',['Menghubungkan warga ke pelatihan dan peluang usaha','Menolak urusan ekonomi','Meminta mereka pindah','Menaikkan iuran'],'Jejaring pemberdayaan memperluas kesempatan kerja.'],
+['Kabar bohong beredar di grup warga dan memicu keresahan.|Langkah RW?',['Mengklarifikasi dengan data dan mengajak cek fakta','Ikut menyebarkan','Membubarkan grup','Mengabaikan'],'Literasi informasi mencegah salah paham sosial.'],
+['Perayaan hari besar diikuti warga berbagai agama.|Peran RW?',['Memfasilitasi kerja sama lintas kelompok','Membatasi peserta','Memisahkan panitia','Meniadakan acara'],'Kerja sama lintas kelompok memperkuat integrasi.'],
+['Lingkungan kumuh di RW rawan penyakit.|Prioritas?',['Kolaborasi dengan puskesmas dan program lingkungan sehat','Membiarkan alami','Menutup permukiman','Menunggu wabah'],'Pencegahan melibatkan sektor kesehatan dan warga.'],
+['Ketua RT melapor ada warga rentan belum menerima bantuan.|Tindak lanjut RW?',['Mengusulkan pendataan ulang ke desa','Mengabaikan laporan','Membagi bantuan sama rata','Menunda tahun depan'],'RW menjembatani aspirasi RT dan pemerintah desa.'],
+['Warga muda enggan ikut organisasi RW.|Cara melibatkan?',['Membuka ruang kegiatan sesuai minat pemuda','Mewajibkan hadir','Mengganti seluruh pengurus','Meniadakan organisasi'],'Partisipasi tumbuh dari kegiatan yang bermakna.'],
+['Mobil warga parkir menutup jalan lingkungan.|Pendekatan?',['Menyepakati aturan parkir lewat musyawarah','Mengangkat mobil warga','Membiarkan saja','Memasang portal tanpa bicara'],'Aturan bersama lebih ditaati daripada pemaksaan.']]];
+KQ2.forEach((a,i)=>a.forEach((q,n)=>{const s=q[0].split('|'),pf=6+i;M.push({id:'k'+pf+'_'+n,t:P[pf][1]+' #'+(n+1),loc:'kerja',topic:P[pf][1],pf,coin:45,xp:30,mat:'',c:s[0],q:s[1],o:q[1].map((t,j)=>[t,j?0:2]),e:q[2]})}));
+/* --- mesin misi: shift profesi (30/hari) dan misi tempat (10/hari), soal & jawaban diacak --- */
+const PP={pasar:[2],sekolah:[1],puskesmas:[4],balai:[5,9],kantor:[6,7],taman:[3],pabrik:[2,3],permukiman:[8],rusun:[8,0]};
+const pool=k=>typeof k=='number'?M.filter(m=>m.pf==k&&m.loc=='kerja'):M.filter(m=>m.loc=='kerja'&&PP[k.slice(1)].includes(m.pf)),cap=k=>typeof k=='number'?30:10,kname=k=>typeof k=='number'?P[k][1]:bn(k.slice(1)),back=k=>typeof k=='number'?'kerja':k.slice(1);
+function startK(k){if(k==null)return;const j=dj(),n=j.n[k]||0;CX={k};if(j.r[k]||n>=cap(k))return go(back(k));if((S.cd||0)>Date.now())return brk();const q=j.q[k]||[],m=shuf(pool(k).filter(x=>!q.includes(x.id)))[0];if(!m){j.r[k]=1;save();return show(`<h2>\u2705 Soal hari ini habis</h2><p>Semua soal ${kname(k)} yang tersedia hari ini sudah kamu kerjakan. Sampai besok!</p><button data-a=back>\u2b05 Kembali</button>`)}m.o=shuf(m.o);CX.m=m;CX.done=0;sq(m)}
+sq=function(m,r){const j=dj(),k=CX.k,n=j.n[k]||0;let h=`<h2>${P[m.pf][0]} ${m.t}</h2><small>${kname(k)} \u00b7 misi ke-${n+(r?0:1)} dari ${cap(k)} hari ini</small>${m.mat?`<h3>\ud83d\udcd6 Materi</h3><p>${m.mat}</p>`:''}<h3>\ud83e\udde9 Kasus</h3><p>${m.c}</p><h3>\u2753 ${m.q}</h3>`;m.o.forEach((o,i)=>h+=`<button class='op ${r&&r.i==i?['no','mid','ok'][o[1]]:''}' data-a=sa data-v='${i}' ${r?'disabled':''}>${o[0]}</button>`);if(r)h+=`<div class=cd><div><b>${['Belum tepat \u274c','Sebagian benar \ud83d\udfe1','Jawaban tepat \u2705'][r.s]}</b><p>${m.e}</p><p>${r.msg}</p></div></div>`+(n>=cap(k)?'<small>Batas hari ini tercapai. Selesai!</small>':`<button data-a=nx>\u25b6 Lanjut</button> <button data-a=rest style='background:#8e44ad'>\ud83d\ude34 Istirahat / Selesai</button>`);show(h)};
+brk=function(){clearInterval(BT);const f=()=>{const w=Math.ceil(((S.cd||0)-Date.now())/1000);if(w<=0){clearInterval(BT);if($('#bk'))startK(CX.k);return}if($('#bk'))$('#bk').textContent=w};show(`<h2>\u2615 Jeda sebentar</h2><p>Misi berikutnya dimulai dalam <b id=bk>30</b> detik...</p><button data-a=rest style='background:#8e44ad'>\ud83d\ude34 Istirahat (akhiri hari ini)</button>`);f();BT=setInterval(f,500)};
+A.shift=()=>startK(S.prof);A.pm=v=>startK('x'+v);A.nx=()=>brk();
+A.sa=v=>{const m=CX&&CX.m;if(!m||CX.done)return;CX.done=1;const k=CX.k,j=dj(),s=m.o[v][1],f=s==2?1:.5,pr=typeof k=='number',c=Math.round(m.coin*f*(pr?1.2:1)),x=Math.round(m.xp*f);(j.q[k]=j.q[k]||[]).push(m.id);j.n[k]=(j.n[k]||0)+1;S.cd=Date.now()+30000;S.done[m.id]={s,i:+v};if(pr&&s)S.px[m.pf]=(S.px[m.pf]||0)+x;if(s)gain(c,x,'Misi: '+kname(k));else save();sq(m,{s,i:+v,msg:s?`Hadiah: +${c} \ud83e\ude99 dan +${x} XP`:'Tidak ada hadiah. Pelajari penjelasannya.'})};
+A.rest=()=>{clearInterval(BT);if(!CX)return;dj().r[CX.k]=1;save();toast('Selesai untuk hari ini. Istirahat yang cukup ya!');go(back(CX.k))};
+const mis0=A.mis;A.mis=v=>{const m=M.find(x=>x.id==v);if(m&&!S.done[v])m.o=shuf(m.o);mis0(v)};
+T.kerja=()=>{const j=dj(),p=S.prof,n=p!=null?j.n[p]||0:0;return `<h2>\ud83d\udcbc Kerja</h2>${p==null?'<div class=cd><div><b>Belum punya pekerjaan</b><small>Pilih profesi di bawah.</small></div></div>':`<div class=cd><span class=ic>${P[p][0]}</span><div><b>Shift ${P[p][1]}</b><small>Hari ini: ${n}/30 misi${j.r[p]?' \u00b7 shift selesai':''}</small><div class=bar><i style='width:${n/30*100}%'></i></div></div>${j.r[p]||n>=30?'<small>Shift selesai. Kembali besok.</small>':`<button data-a=shift>${n?'Lanjut Kerja':'Mulai Shift'}</button>`}</div>`}<small>Maks 30 misi per hari tiap bidang, jeda 30 detik antar misi. Istirahat mengakhiri shift hari itu.</small><h3>Pilih Profesi Utama</h3>${profs()}<h3>Misi Lokasi</h3>${M.filter(m=>m.loc!='kerja').map(mrow).join('')}`};
+/* --- kavling permukiman --- */
+const PLS=[];for(let r=0;r<2;r++)for(let c=0;c<8;c++)PLS.push([[-50,-38,-26,-14,14,26,38,50][c],[27,41][r]]);
+const mineP=()=>PL.find(p=>p.u==UID);
+function kvUI(){const m=mineP();return `<h3>\ud83c\udfe1 Kavling Permukiman</h3><small id=kvg>Pilih satu petak tanah (\ud83e\ude99400) untuk rumahmu. Satu warga satu kavling.${m?' Milikmu: #'+m.id.slice(1)+'.':''}</small><div class=grid>${PLS.map((p,i)=>{const o=PL.find(x=>x.id=='p'+(i+1));return `<div class=cd><b>#${i+1}</b><small>${o?'\ud83c\udfe0 '+esc(o.n):'Kosong'}</small>${o?(o.u==UID?`<button data-a=kvgo data-v=${i+1}>Ke sana</button>`:''):`<button data-a=kv data-v=${i+1} ${m?'disabled':''}>\ud83e\ude99400</button>`}</div>`}).join('')}</div>${m?`<button data-a=kvrel style='background:#d64545'>Lepas Kavling</button>`:''}`}
+const bh1=bh;bh=function(id){let h=bh1(id);if(PP[id]){const k='x'+id,j=dj(),n=j.n[k]||0;h+=`<h3>\ud83c\udfb2 Misi Tempat</h3><div class=cd><div><b>${bn(id)}</b><small>${n}/10 misi hari ini \u00b7 soal acak, jeda 30 detik</small><div class=bar><i style='width:${n*10}%'></i></div></div>${j.r['x'+id]||n>=10?'<small>Selesai hari ini</small>':`<button data-a=pm data-v='${id}'>${n?'Lanjut':'Mulai'}</button>`}</div>`}if(id=='permukiman')h+=kvUI();return h};
+A.kv=v=>{if(mineP())return toast('Kamu sudah punya kavling');if(S.coin<400)return toast('Saldo kurang (butuh \ud83e\ude99400)');cl('plots').doc('p'+v).set({u:UID,k:S.k,n:S.n,c:S.col,ts:Date.now()}).then(()=>{spend(400,'Beli kavling #'+v);toast('Kavling #'+v+' resmi milikmu!')}).catch(()=>toast('Kavling sudah diambil warga lain'))};
+A.kvgo=v=>{pl.position.set(PLS[v-1][0],0,PLS[v-1][1]+7);A.close()};
+A.kvrel=()=>{const m=mineP();if(m)cl('plots').doc(m.id).delete().then(()=>toast('Kavling dilepas')).catch(()=>{})};
+function drawPlots(){if(!sc)return;if(PG)sc.remove(PG);for(let i=CL.length;i--;)if(CL[i].pl)CL.splice(i,1);PG=new THREE.Group();PLS.forEach((p,i)=>{const o=PL.find(x=>x.id=='p'+(i+1)),g=new THREE.Group();g.position.set(p[0],0,p[1]);const add=(w,h,d,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),MT(c));m.position.set(x,y,z);g.add(m);return m};add(10,.12,10,o?0x9ccc65:0xd7b98a,0,.08,0);[[-5,-5],[5,-5],[-5,5],[5,5]].forEach(q=>add(.3,1,.3,0x8d6e4a,q[0],.5,q[1]));
+ if(o){const c=CT.find(x=>x.k==o.k),L=Math.max(1,Math.min(3,(c&&c.home)||1)),w=3.5+L*1.2,h=2+L*.7,d=3.5+L,col=/^#[0-9a-f]{6}$/i.test(o.c)?o.c:'#e63946';add(w,h,d,0xfff3e0,0,h/2,0);const s=new THREE.Shape();s.moveTo(-w/2-.4,0);s.lineTo(w/2+.4,0);s.lineTo(0,1.6);s.closePath();const rg=new THREE.ExtrudeGeometry(s,{depth:d+.8,bevelEnabled:false});rg.translate(0,0,-(d+.8)/2);const rm=new THREE.Mesh(rg,MT(col));rm.position.y=h;g.add(rm);add(1,1.8,.12,0x5d4037,0,.9,d/2+.06);add(.9,.9,.12,0xbbdefb,w/3,h*.6,d/2+.06);add(.9,.9,.12,0xbbdefb,-w/3,h*.6,d/2+.06);CL.push({x:p[0],z:p[1],w,d,pl:1});tag(g,o.n)}else tag(g,'Kavling #'+(i+1));g.children[g.children.length-1].position.y=o?7:4;PG.add(g)});sc.add(PG)}
+const net1=net;net=function(){net1();cl('plots').onSnapshot(s=>{PL=s.docs.map(d=>({id:d.id,...d.data()}));drawPlots();if($('#kvg')&&S)go('permukiman')},()=>{})};
+/* --- kamera ala Roblox --- */
+const CMN=['Orbit','Dekat','Udara','Orang Pertama'];
+function camUpd(){const x=pl.position.x,z=pl.position.z;pl.visible=cm!=3;if(cm==3){cam.position.set(x,2.1,z);cam.lookAt(x-Math.sin(cy)*10,2.1+(.8-cp)*7,z-Math.cos(cy)*10);return}const D=[18,9,42][cm]*zm,c=Math.cos(cp);cam.position.set(x+Math.sin(cy)*c*D,Math.max(1,1.2+Math.sin(cp)*D),z+Math.cos(cy)*c*D);cam.lookAt(x,1.2,z)}
+A.cam=()=>{cm=(cm+1)%4;cp=[.85,.45,1.35,.8][cm];toast('\ud83c\udfa5 Kamera: '+CMN[cm])};
+/* --- notifikasi chat --- */
+function badge(){const b=document.querySelector('#nv [data-v=chat]');if(b)b.dataset.n=UN||''}
+function ping(){if(AC&&mon&&AC.state=='running'){const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=880;g.gain.value=.06;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+.12)}}
+function chatNotify(old){if(!S)return;const nw=CH.filter(c=>c.ts>old&&c.u!=S.n);if(!nw.length)return;if(PK=='chat'&&$('#pn').style.display=='block')return;UN+=nw.length;badge();const l=nw[nw.length-1];toast('\ud83d\udcac '+l.u+': '+String(l.m).slice(0,40));ping()}
+const tc=T.chat;T.chat=()=>{UN=0;badge();return tc()};
+/* --- reset oleh developer & deteksi akun yang dihapus --- */
+function bye(h){const b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:9;background:linear-gradient(#ffd89b,#9fdcff);display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;color:#2b2a33';b.innerHTML="<div class='bx'>"+h+"</div>";document.body.appendChild(b)}
+function chkReset(){if(!S)return;if(CT.some(c=>c.k==S.k)){seen=1;return}if(seen&&!leaving){const o=S;S=null;clearTimeout(save.t);['pn','hd','nv','js','rb'].forEach(i=>$('#'+i).style.display='none');bye("<h1>\ud83d\udd04 Progres Direset</h1><p>Progres desa direset oleh pengembang. Silakan daftar ulang sebagai warga baru.</p><button onclick='location.reload()'>Mulai Lagi</button>")}}
+const lvy0=A.lvy;A.lvy=()=>{leaving=1;return lvy0()};
+A.rst=async()=>{if(!ISD)return;if(prompt('Ketik RESET untuk menghapus SEMUA progres pemain (KTP, koin, XP, kavling, suara, obrolan, usulan).')!=='RESET')return;try{await USR.reset();$('#gs').textContent='Semua progres telah direset.'}catch(e){$('#gs').textContent='Gagal reset (hanya developer yang boleh).'}};
+/* --- dashboard guru --- */
+gd=function(){if(!G||!$('#gl'))return;const tot=CT.reduce((s,c)=>s+Object.keys(c.done||{}).length,0),ago=t=>t?Math.max(0,Math.round((Date.now()-t)/6e4))+' mnt lalu':'-';$('#gl').innerHTML=`<p>\ud83d\udc65 ${CT.length} warga \u00b7 \ud83d\udfe2 ${Object.keys(RP).length} online \u00b7 \u2705 ${tot} jawaban tercatat \u00b7 \ud83d\udcdd ${PR.length} usulan \u00b7 \ud83c\udfe1 ${PL.length} kavling</p><div style='overflow-x:auto'><table><tr><th>Nama</th><th>Desil</th><th>Lv</th><th>XP</th><th>Koin</th><th>Pekerjaan</th><th>Misi</th><th>Aktif</th></tr>${CT.map(c=>`<tr><td>${esc(c.n)}</td><td>${dsl(c.coin||0)}</td><td>${1+Math.floor((c.xp||0)/100)}</td><td>${c.xp||0}</td><td>${c.coin||0}</td><td>${c.prof!=null&&P[c.prof]?P[c.prof][1]:'-'}</td><td>${Object.keys(c.done||{}).length}</td><td>${ago(c.ts)}</td></tr>`).join('')||'<tr><td colspan=8>Belum ada warga.</td></tr>'}</table></div><h3>Usulan Warga</h3>${PR.map(p=>`<div class='cd'><div>${esc(p.t)}<small>${esc(p.by)} \u00b7 ${vc(p.id)} suara</small></div><button data-a='dp' data-v='${p.id}'>Hapus</button></div>`).join('')||'<small>Belum ada usulan.</small>'}<h3>Misi Buatan Guru</h3>${MS.map(m=>`<div class='cd'><div>${esc(m.t)}<small>${P[m.pf]?P[m.pf][1]:''}</small></div><button data-a='dm' data-v='${m.id}'>Hapus</button></div>`).join('')||'<small>Belum ada.</small>'}${ISD?`<h3>\u26a0\ufe0f Zona Developer</h3><button data-a='rst' style='background:#d64545'>Reset Semua Progres</button>`:''}`};
+
 init2();
 </script></body></html>
