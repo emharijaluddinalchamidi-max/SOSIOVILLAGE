@@ -47,8 +47,8 @@ input{padding:9px;border-radius:10px;border:2px solid var(--ln);background:var(-
 <script>
 /* ===== SOSIOVILLAGE · lapisan Supabase (v3) =====
    Isi dua baris ini dengan data dari Supabase: Project Settings > API */
-const SB_URL = 'https://rscwqcqfnasfufkzheln.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzY3dxY3FmbmFzZnVma3poZWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3ODI2MzQsImV4cCI6MjEwOTM1ODYzNH0.ksmyEj3RZXMqEETHELPKhbD_AW7rxxbUFmGxyhFMh4o';
+const SB_URL = 'ISI_URL_PROYEK_SUPABASE';
+const SB_KEY = 'ISI_ANON_KEY_SUPABASE';
 /* ================================================= */
 (function () {
   const ok = !/^ISI_/.test(SB_URL + SB_KEY);
@@ -151,11 +151,14 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
     }
   };
   const one = async t => { const { data, error } = await sb.from(t).select('email').limit(1).maybeSingle(); return error ? null : !!data; };
+  let RLP = null;
+  const roles = () => RLP || (RLP = sb.rpc('my_roles').then(r => r.error ? null : r.data, () => null));
   const usr = {
     id: async () => uid,
     email: async () => EM,
-    canEdit: () => one('teachers'),
-    isDev: () => one('developers'),
+    canEdit: async () => { const r = await roles(); return r ? !!r.teacher : one('teachers'); },
+    isDev: async () => { const r = await roles(); return r ? !!r.dev : one('developers'); },
+    diag: () => roles(),
     reset: async () => {
       for (const c of ['citizens', 'votes', 'plots', 'donations', 'proposals', 'chat']) {
         const { error } = await sb.from('docs').delete().eq('col', c);
@@ -463,7 +466,7 @@ function music(){if(AC)return;AC=new(window.AudioContext||window.webkitAudioCont
  const nb=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;const ns=AC.createBufferSource(),lf=AC.createBiquadFilter();ns.buffer=nb;ns.loop=true;lf.type='lowpass';lf.frequency.value=1400;RG=AC.createGain();RG.gain.value=0;ns.connect(lf);lf.connect(RG);RG.connect(AC.destination);ns.start()}
 A.snd=()=>{mon=!mon;if(mon&&!AC)music();if(MG)MG.gain.value=mon?.16:0;hud()};
 document.addEventListener('pointerdown',()=>{if(mon&&!AC)music();if(AC&&AC.state=='suspended')AC.resume()});
-async function init2(){const e=$('#er'),b=$('#gb');b.disabled=true;e.textContent='Menghubungkan ke desa...';try{const r=await Promise.all([SVrt.use('db'),SVrt.use('user'),SVrt.use('room')]);DB=r[0];RM=r[2];UID=r[1]&&await r[1].id();USR=r[1];const cg=r[1]?await r[1].canEdit():0,cd=r[1]&&r[1].isDev?await r[1].isDev():0;ISG=!!cg;ISD=!!cd;GERR=(cg===null||cd===null)?1:0;EMAIL=r[1]&&r[1].email?await r[1].email():'';if(!DB||!UID){e.textContent='Gagal masuk. Muat ulang halaman lalu login kembali.';return}net();
+async function init2(){const e=$('#er'),b=$('#gb');b.disabled=true;e.textContent='Menghubungkan ke desa...';try{const r=await Promise.all([SVrt.use('db'),SVrt.use('user'),SVrt.use('room')]);DB=r[0];RM=r[2];UID=r[1]&&await r[1].id();USR=r[1];const cg=r[1]?await r[1].canEdit():0,cd=r[1]&&r[1].isDev?await r[1].isDev():0;ISG=!!cg;ISD=!!cd;GERR=(cg===null||cd===null)?1:0;EMAIL=r[1]&&r[1].email?await r[1].email():'';ROLES=r[1]&&r[1].diag?await r[1].diag():null;if(!DB||!UID){e.textContent='Gagal masuk. Muat ulang halaman lalu login kembali.';return}net();
  cl('missions').onSnapshot(s=>{MS=s.docs.map(d=>({id:d.id,...d.data()}));for(let i=M.length;i--;)if(M[i].cu)M.splice(i,1);MS.forEach(d=>{if(!d.a||!P[d.pf])return;const p=(d.id.charCodeAt(0)+d.id.length)%3,x=d.a.slice(1);M.push({id:'c'+d.id,cu:1,t:d.t,loc:'kerja',topic:P[d.pf][1],pf:d.pf,coin:d.coin,xp:d.xp,mat:d.m||'',c:d.c,q:d.q,o:[...x.slice(0,p),d.a[0],...x.slice(p)].map((t,j)=>[t,j==p?2:0]),e:d.e})});if(G)gd()},()=>{});
  const s=await cl('citizens').doc(UID).get();e.textContent='';ME=s.exists?unpack(s.data()):null;if(ME&&!ISG&&!ISD&&!/^#(guru|developer)/.test(location.hash||'')){S=ME;return start()}$('#rg').style.display=ME?'none':'grid';b.disabled=false;$('#gu').style.display='block'}catch(x){e.textContent='Gagal terhubung ke desa. Muat ulang halaman.'}}
 A.guru=()=>{G=1;$('#au').style.display='none';const d=$('#gd');d.style.display='block';if(RM)RM.onPeers(c=>{RP={};c.peers.forEach(p=>{if(!p.isMe&&p.presence&&p.presence.n)RP[p.peer]=1});gd()});d.innerHTML=`<h2>🧑‍🏫 Dashboard Guru</h2><div id='gl'></div><h3>➕ Tambah Misi / Materi</h3><div class='f'><input id='gt' placeholder='Judul misi'><input id='gm' placeholder='Materi singkat'><input id='gc' placeholder='Kasus / fenomena sosial'><input id='gq' placeholder='Pertanyaan'><input id='ga0' placeholder='Jawaban BENAR'><input id='ga1' placeholder='Jawaban salah 1'><input id='ga2' placeholder='Jawaban salah 2'><input id='ge' placeholder='Penjelasan konsep'><select id='gp'>${P.map((p,i)=>`<option value='${i}'>${p[1]}</option>`).join('')}</select><input id='gk' type='number' placeholder='Hadiah koin (maks 300)'><input id='gx' type='number' placeholder='Hadiah XP (maks 200)'><button data-a='am2'>Simpan Misi</button><small id='gs'></small></div><br><button data-a='gout' style='background:#d64545'>Keluar</button>`;gd()};
@@ -707,7 +710,7 @@ music=function(){if(AC)return;AC=new(window.AudioContext||window.webkitAudioCont
  const ns=AC.createBufferSource(),lf=AC.createBiquadFilter();ns.buffer=nb;ns.loop=true;lf.type='lowpass';lf.frequency.value=1400;RG=AC.createGain();RG.gain.value=0;ns.connect(lf);lf.connect(RG);RG.connect(AC.destination);ns.start()};
 
 /* ===== v5: tekstur realistis, langit, pohon, orang, mobil, kota seberang, akses guru ===== */
-let TX={},LF=[],CITY=[],SKY=null,SUN,MOON,CLD=[],STR,SKT=0,GF=1,EMAIL='',GERR=0;
+let TX={},LF=[],CITY=[],SKY=null,SUN,MOON,CLD=[],STR,SKT=0,GF=1,EMAIL='',GERR=0,ROLES=null;
 const MTX=(c,m,o)=>new THREE.MeshLambertMaterial(Object.assign({color:c,map:m},o||{}));
 function ctex(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
 const sp=(g,w,h,n,fn)=>{for(let i=0;i<n;i++)fn(g,Math.random()*w,Math.random()*h,Math.random())};
@@ -802,7 +805,7 @@ fieldTick=function(t,dt,si){const sn=si==4,rn=si==2||sn;
 const fxTick0=fxTick;fxTick=function(dt){fxTick0(dt);if(!GR)return;const t=Date.now();if(pl)animP(pl,dt,t);for(const id in RP)animP(RP[id].g,dt,t);CITY.forEach(m=>m.emissiveIntensity=Math.min(1,NFG*1.6));CLD.forEach(c=>{c.g.position.x+=c.s*dt;if(c.g.position.x>520)c.g.position.x=-520})};
 /* --- akses guru / developer: diagnosis akun + jalur masuk --- */
 A.gacc=()=>{A.gx();const em=esc(EMAIL||'(email tidak terbaca)'),q=(EMAIL||'').replace(/'/g,"''"),sql="insert into public.teachers (email) values ('"+q+"') on conflict do nothing;\ninsert into public.developers (email) values ('"+q+"') on conflict do nothing;",d=document.createElement('div');d.id='ga';d.style.cssText='position:fixed;inset:0;z-index:12;background:#0008;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto';
- d.innerHTML="<div class='bx'><h2 style='margin:0'>\ud83d\udd11 Akses Guru / Developer</h2><p>Akun: <b>"+em+"</b></p><p>Guru: <b>"+(ISG?'\u2705 terdaftar':'\u274c belum')+"</b> \u00b7 Developer: <b>"+(ISD?'\u2705 terdaftar':'\u274c belum')+"</b></p>"+(GERR?"<p style='color:#d64545'>Tabel teachers/developers tidak bisa dibaca. Jalankan supabase_update_v3.sql di SQL Editor lebih dulu.</p>":'')+((ISG||ISD)?"<button data-a='guru'>\ud83e\uddd1\u200d\ud83c\udfeb Buka Dashboard</button>":"<p>Untuk mendaftarkan akun ini, jalankan di Supabase &gt; SQL Editor, lalu muat ulang halaman:</p><textarea readonly rows=4 style='width:100%;font:12px monospace'>"+esc(sql)+"</textarea>")+"<button data-a='gx' style='background:#757575'>Tutup</button></div>";document.body.appendChild(d)};
+ d.innerHTML="<div class='bx'><h2 style='margin:0'>\ud83d\udd11 Akses Guru / Developer</h2><p>Akun: <b>"+em+"</b></p><p>Guru: <b>"+(ISG?'\u2705 terdaftar':'\u274c belum')+"</b> \u00b7 Developer: <b>"+(ISD?'\u2705 terdaftar':'\u274c belum')+"</b></p>"+(ROLES?"<p><small>Terbaca oleh database: email <b>"+esc(ROLES.email||'-')+"</b> \u00b7 baris di tabel teachers: <b>"+ROLES.teachers_count+"</b>, developers: <b>"+ROLES.dev_count+"</b>. Jika jumlahnya 0, jalankan SQL di bawah. Jika lebih dari 0 tetapi status tetap belum, email di tabel berbeda dengan email akun.</small></p>":"<p style='color:#d64545'><small>Fungsi my_roles belum ada di database. Jalankan supabase_fix_akses.sql di SQL Editor lalu muat ulang.</small></p>")+(GERR?"<p style='color:#d64545'>Tabel teachers/developers tidak bisa dibaca. Jalankan supabase_update_v3.sql di SQL Editor lebih dulu.</p>":'')+((ISG||ISD)?"<button data-a='guru'>\ud83e\uddd1\u200d\ud83c\udfeb Buka Dashboard</button>":"<p>Untuk mendaftarkan akun ini, jalankan di Supabase &gt; SQL Editor, lalu muat ulang halaman:</p><textarea readonly rows=4 style='width:100%;font:12px monospace'>"+esc(sql)+"</textarea>")+"<button data-a='gx' style='background:#757575'>Tutup</button></div>";document.body.appendChild(d)};
 A.gx=()=>document.querySelectorAll('#ga').forEach(e=>e.remove());
 const g0=A.guru;A.guru=()=>{if(!ISG&&!ISD)return A.gacc();A.gx();g0()};
 const k1=T.ktp;T.ktp=()=>k1()+"<h3>\ud83d\udd11 Akses Guru / Developer</h3><small>Cek apakah akun ini terdaftar sebagai guru atau developer.</small><button data-a='gacc'>Cek Akses Akun</button>";
